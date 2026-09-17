@@ -1,0 +1,47 @@
+=== NARRATIVE MEMORY BENCHMARK ===
+suite_id: suite-1789580876606453758
+prompt_sha256: 528ce83dfe208d1551b71547e6cef16c3051971570c81331e9efc0bdc83f4ce0
+extraction_sampling: temperature=0.0 seed=424242 cache_prompt=False
+fixtures: 8
+
+CASE                      PROFILE                    SEM GRD FORB END ALL SEC
+gen-document-map          FAST+COVERAGE+SAY          0.889 0.889 0.500 0.750 0.797 6.61
+gen-epistemic-claim       FAST+COVERAGE+SAY          1.000 1.000 0.333 0.750 0.842 6.34
+gen-interrupted-dialogue  FAST+COVERAGE+SAY          0.778 0.778 1.000 1.000 0.844 9.35
+gen-multi-location-end    FAST+COVERAGE+SAY+DOC      0.818 0.636 1.000 0.750 0.766 7.40
+gen-negative-intent       FAST+COVERAGE+SAY          0.833 0.833 0.667 1.000 0.817 5.35
+gen-pronoun-transfer      FAST+REPAIR+COVERAGE+SAY   0.100 0.100 1.000 1.000 0.370 7.54
+gen-shared-subject-chain  FAST+REPAIR+COVERAGE+SAY   0.900 0.900 1.000 1.000 0.930 6.85
+gen-terminal-message      FAST+COVERAGE+SAY          0.750 0.750 0.333 1.000 0.692 8.05
+
+=== MACRO ===
+semantic_coverage: 0.759
+grounded_coverage: 0.736
+forbidden_pass: 0.729
+end_pass: 0.906
+overall: 0.757
+elapsed_total: 57.49s
+
+=== FAILURES ===
+[gen-document-map]
+  required: priya-packs-map
+  forbidden: map-text-promoted-to-say
+  end: situation
+[gen-epistemic-claim]
+  forbidden: seeming-lean-promoted, shift-claim-promoted-to-fact
+  end: situation
+[gen-interrupted-dialogue]
+  required: dax-sets-crate
+[gen-multi-location-end]
+  required: sol-loose-cable-speech, rafi-writes-cable
+  end: situation
+[gen-negative-intent]
+  required: arden-carries-toolbox
+  forbidden: refused-pull-promoted
+[gen-pronoun-transfer]
+  required: ivo-snatches-compass, ivo-wraps-compass, ivo-tosses-to-lian, lian-catches-compass, lian-slides-satchel, lian-passes-to-oren, oren-clips-compass
+[gen-shared-subject-chain]
+  required: tomas-tucks-canister
+[gen-terminal-message]
+  required: terminal-warning-content
+  forbidden: display-promoted-to-say, negated-read-aloud-promoted

@@ -1,0 +1,35 @@
+=== NARRATIVE MEMORY BENCHMARK ===
+suite_id: suite-1789580623563473571
+prompt_sha256: 528ce83dfe208d1551b71547e6cef16c3051971570c81331e9efc0bdc83f4ce0
+extraction_sampling: temperature=0.0 seed=424242 cache_prompt=False
+fixtures: 5
+
+CASE                      PROFILE                    SEM GRD FORB END ALL SEC
+b17-baseline              FAST+REPAIR+COVERAGE+SAY+DOC 0.952 0.952 1.000 0.667 0.933 9.13
+coreference-handoff       FAST+COVERAGE+SAY          1.000 1.000 1.000 0.750 0.975 8.56
+document-vs-speech        FAST+REPAIR+COVERAGE+SAY+DOC 0.833 0.833 1.000 0.750 0.858 8.83
+end-location              FAST+COVERAGE+SAY+DOC      1.000 1.000 1.000 0.750 0.975 8.24
+hedged-perception         FAST+REPAIR+COVERAGE+SAY   0.900 0.900 1.000 0.750 0.905 6.54
+
+=== MACRO ===
+semantic_coverage: 0.937
+grounded_coverage: 0.937
+forbidden_pass: 1.000
+end_pass: 0.733
+overall: 0.929
+elapsed_total: 41.30s
+
+=== FAILURES ===
+[b17-baseline]
+  required: sava-arrives
+  end: loc_not_object
+[coreference-handoff]
+  end: situation
+[document-vs-speech]
+  required: mira-reads-warning
+  end: situation
+[end-location]
+  end: situation
+[hedged-perception]
+  required: keva-waits
+  end: situation

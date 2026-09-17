@@ -1,0 +1,147 @@
+{
+  "fixture": "Generalization map annotation story",
+  "story": "benchmarks/document_map_story.txt",
+  "case": "gen-document-map",
+  "focus": [
+    "written-content",
+    "document-vs-speech",
+    "unseen-document-kind",
+    "end-location"
+  ],
+  "segment_idx": 1,
+  "notes": "Written map annotation must remain document content, not character speech.",
+  "required": [
+    {
+      "id": "priya-unfolds-map",
+      "weight": 1,
+      "tags": [
+        "EV"
+      ],
+      "p": 2,
+      "patterns": [
+        "priya",
+        "unfold",
+        "survey map"
+      ]
+    },
+    {
+      "id": "map-ridge-message",
+      "weight": 2,
+      "tags": [
+        "DET",
+        "Q"
+      ],
+      "p": 2,
+      "patterns": [
+        "north culvert",
+        "blocked",
+        "ridge path"
+      ]
+    },
+    {
+      "id": "priya-traces-path",
+      "weight": 1,
+      "tags": [
+        "EV"
+      ],
+      "p": 2,
+      "patterns": [
+        "priya",
+        "trac",
+        "ridge path"
+      ]
+    },
+    {
+      "id": "priya-ridge-speech",
+      "weight": 2,
+      "tags": [
+        "SAY"
+      ],
+      "p": 3,
+      "patterns": [
+        "priya",
+        "take",
+        "ridge"
+      ]
+    },
+    {
+      "id": "priya-circles-checkpoint",
+      "weight": 1,
+      "tags": [
+        "EV"
+      ],
+      "p": 3,
+      "patterns": [
+        "priya",
+        "circl",
+        "checkpoint c"
+      ]
+    },
+    {
+      "id": "priya-folds-map",
+      "weight": 1,
+      "tags": [
+        "EV"
+      ],
+      "p": 3,
+      "patterns": [
+        "priya",
+        "\\bfold(?:s|ed|ing)?\\b",
+        "map"
+      ]
+    },
+    {
+      "id": "priya-packs-map",
+      "weight": 1,
+      "tags": [
+        "EV"
+      ],
+      "p": 4,
+      "patterns": [
+        "priya",
+        "plac",
+        "map",
+        "pack"
+      ]
+    }
+  ],
+  "forbidden": [
+    {
+      "id": "map-text-promoted-to-say",
+      "tags": [
+        "SAY"
+      ],
+      "patterns": [
+        "north culvert",
+        "blocked",
+        "ridge path"
+      ]
+    },
+    {
+      "id": "wrong-speaker-ridge",
+      "tags": [
+        "SAY"
+      ],
+      "patterns": [
+        "malik",
+        "take",
+        "ridge"
+      ]
+    }
+  ],
+  "end": {
+    "present_patterns": [
+      "priya"
+    ],
+    "situation_patterns": [
+      "map",
+      "pack"
+    ],
+    "loc_patterns": [
+      "ridge path"
+    ],
+    "forbidden_loc_patterns": [
+      "truck hood"
+    ]
+  }
+}

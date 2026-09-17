@@ -1,0 +1,146 @@
+{
+  "fixture": "Generalization epistemic claim story",
+  "story": "benchmarks/epistemic_claim_story.txt",
+  "case": "gen-epistemic-claim",
+  "focus": [
+    "epistemic-boundary",
+    "claim-vs-fact",
+    "seeming",
+    "end-location"
+  ],
+  "segment_idx": 1,
+  "notes": "Tests that seeming and spoken claims are not hardened into explicit world facts.",
+  "required": [
+    {
+      "id": "hal-storm-claim",
+      "weight": 2,
+      "tags": [
+        "SAY"
+      ],
+      "p": 3,
+      "patterns": [
+        "hal",
+        "storm",
+        "bent"
+      ]
+    },
+    {
+      "id": "vero-uncertainty-speech",
+      "weight": 2,
+      "tags": [
+        "SAY"
+      ],
+      "p": 3,
+      "patterns": [
+        "vero",
+        "maybe",
+        "don't know"
+      ]
+    },
+    {
+      "id": "vero-photographs-base",
+      "weight": 1,
+      "tags": [
+        "EV"
+      ],
+      "p": 3,
+      "patterns": [
+        "vero",
+        "photograph",
+        "base"
+      ]
+    },
+    {
+      "id": "vero-marks-chalk",
+      "weight": 1,
+      "tags": [
+        "EV"
+      ],
+      "p": 3,
+      "patterns": [
+        "vero",
+        "mark",
+        "chalk line"
+      ]
+    },
+    {
+      "id": "hal-shift-claim",
+      "weight": 1,
+      "tags": [
+        "SAY"
+      ],
+      "p": 4,
+      "patterns": [
+        "hal",
+        "mast",
+        "shift"
+      ]
+    },
+    {
+      "id": "vero-measures-line",
+      "weight": 2,
+      "tags": [
+        "EV"
+      ],
+      "p": 4,
+      "patterns": [
+        "vero",
+        "measur",
+        "chalk line"
+      ]
+    }
+  ],
+  "forbidden": [
+    {
+      "id": "seeming-lean-promoted",
+      "tags": [
+        "EV",
+        "KN"
+      ],
+      "epistemic": "EXPLICIT",
+      "patterns": [
+        "antenna",
+        "lean",
+        "east"
+      ]
+    },
+    {
+      "id": "storm-bent-promoted-to-fact",
+      "tags": [
+        "EV",
+        "KN"
+      ],
+      "epistemic": "EXPLICIT",
+      "patterns": [
+        "storm",
+        "bent",
+        "antenna|mast|it"
+      ]
+    },
+    {
+      "id": "shift-claim-promoted-to-fact",
+      "tags": [
+        "EV",
+        "KN"
+      ],
+      "epistemic": "EXPLICIT",
+      "patterns": [
+        "mast",
+        "shift"
+      ]
+    }
+  ],
+  "end": {
+    "present_patterns": [
+      "vero"
+    ],
+    "situation_patterns": [
+      "chalk line",
+      "no change"
+    ],
+    "loc_patterns": [
+      "rooftop"
+    ],
+    "forbidden_loc_patterns": []
+  }
+}

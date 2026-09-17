@@ -1,0 +1,157 @@
+{
+  "fixture": "Generalization multi-location ending story",
+  "story": "benchmarks/multi_location_end_story.txt",
+  "case": "gen-multi-location-end",
+  "focus": [
+    "end-location",
+    "remote-character-location",
+    "speaker-attribution",
+    "coordinated-actions"
+  ],
+  "segment_idx": 1,
+  "notes": "One character leaves for a remote location while the ending focal character remains in the original room.",
+  "required": [
+    {
+      "id": "sol-roof-speech",
+      "weight": 1,
+      "tags": [
+        "SAY"
+      ],
+      "p": 2,
+      "patterns": [
+        "sol",
+        "inspect",
+        "roof antenna"
+      ]
+    },
+    {
+      "id": "rafi-catalog-speech",
+      "weight": 1,
+      "tags": [
+        "SAY"
+      ],
+      "p": 2,
+      "patterns": [
+        "rafi",
+        "finish",
+        "catalog"
+      ]
+    },
+    {
+      "id": "sol-climbs-roof",
+      "weight": 2,
+      "tags": [
+        "EV"
+      ],
+      "p": 3,
+      "patterns": [
+        "sol",
+        "climb",
+        "roof"
+      ]
+    },
+    {
+      "id": "rafi-shelves-folders",
+      "weight": 1,
+      "tags": [
+        "EV"
+      ],
+      "p": 3,
+      "patterns": [
+        "rafi",
+        "shelv",
+        "folders"
+      ]
+    },
+    {
+      "id": "rafi-locks-cabinet",
+      "weight": 1,
+      "tags": [
+        "EV"
+      ],
+      "p": 3,
+      "patterns": [
+        "rafi",
+        "lock",
+        "cabinet"
+      ]
+    },
+    {
+      "id": "sol-loose-cable-speech",
+      "weight": 2,
+      "tags": [
+        "SAY"
+      ],
+      "p": 4,
+      "patterns": [
+        "sol",
+        "loose",
+        "antenna cable"
+      ]
+    },
+    {
+      "id": "rafi-writes-cable",
+      "weight": 2,
+      "tags": [
+        "EV",
+        "DET"
+      ],
+      "p": 4,
+      "patterns": [
+        "rafi",
+        "antenna cable",
+        "catalog"
+      ]
+    },
+    {
+      "id": "rafi-closes-book",
+      "weight": 1,
+      "tags": [
+        "EV"
+      ],
+      "p": 4,
+      "patterns": [
+        "rafi",
+        "clos",
+        "book"
+      ]
+    }
+  ],
+  "forbidden": [
+    {
+      "id": "rafi-moved-to-roof",
+      "tags": [
+        "EV"
+      ],
+      "patterns": [
+        "^rafi\\b.*\\b(?:climb|go|went|enter|reach)\\w*\\b.*\\broof\\b"
+      ]
+    },
+    {
+      "id": "wrong-speaker-loose-cable",
+      "tags": [
+        "SAY"
+      ],
+      "patterns": [
+        "rafi",
+        "loose",
+        "antenna cable"
+      ]
+    }
+  ],
+  "end": {
+    "present_patterns": [
+      "rafi"
+    ],
+    "situation_patterns": [
+      "catalog",
+      "book"
+    ],
+    "loc_patterns": [
+      "archive office"
+    ],
+    "forbidden_loc_patterns": [
+      "roof"
+    ]
+  }
+}

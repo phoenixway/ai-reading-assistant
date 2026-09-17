@@ -1,0 +1,159 @@
+{
+  "fixture": "Generalization pronoun transfer story",
+  "story": "benchmarks/pronoun_transfer_story.txt",
+  "case": "gen-pronoun-transfer",
+  "focus": [
+    "pronoun-coreference",
+    "role-direction",
+    "transfer-chain",
+    "end-location"
+  ],
+  "segment_idx": 1,
+  "notes": "Tests transfer direction and named-actor recovery through successive pronouns.",
+  "required": [
+    {
+      "id": "maeve-sets-compass",
+      "weight": 1,
+      "tags": [
+        "EV"
+      ],
+      "p": 2,
+      "patterns": [
+        "maeve",
+        "set",
+        "brass compass",
+        "crate"
+      ]
+    },
+    {
+      "id": "ivo-snatches-compass",
+      "weight": 1,
+      "tags": [
+        "EV"
+      ],
+      "p": 2,
+      "patterns": [
+        "ivo",
+        "snatch",
+        "compass"
+      ]
+    },
+    {
+      "id": "ivo-wraps-compass",
+      "weight": 1,
+      "tags": [
+        "EV"
+      ],
+      "p": 2,
+      "patterns": [
+        "ivo",
+        "wrap",
+        "compass|it",
+        "scarf"
+      ]
+    },
+    {
+      "id": "ivo-tosses-to-lian",
+      "weight": 2,
+      "tags": [
+        "EV"
+      ],
+      "p": 2,
+      "patterns": [
+        "ivo",
+        "toss",
+        "lian"
+      ]
+    },
+    {
+      "id": "lian-catches-compass",
+      "weight": 1,
+      "tags": [
+        "EV"
+      ],
+      "p": 2,
+      "patterns": [
+        "lian",
+        "catch|caught",
+        "compass"
+      ]
+    },
+    {
+      "id": "lian-slides-satchel",
+      "weight": 1,
+      "tags": [
+        "EV"
+      ],
+      "p": 2,
+      "patterns": [
+        "lian",
+        "slid|slide",
+        "compass",
+        "satchel"
+      ]
+    },
+    {
+      "id": "lian-passes-to-oren",
+      "weight": 2,
+      "tags": [
+        "EV"
+      ],
+      "p": 3,
+      "patterns": [
+        "lian",
+        "pass",
+        "oren",
+        "compass"
+      ]
+    },
+    {
+      "id": "oren-clips-compass",
+      "weight": 1,
+      "tags": [
+        "EV"
+      ],
+      "p": 3,
+      "patterns": [
+        "oren",
+        "clip",
+        "compass",
+        "belt"
+      ]
+    }
+  ],
+  "forbidden": [
+    {
+      "id": "wrong-direction-oren-passes-lian",
+      "tags": [
+        "EV"
+      ],
+      "patterns": [
+        "^oren\\b.*\\bpass\\w*\\b.*\\blian\\b.*\\bcompass\\b"
+      ]
+    },
+    {
+      "id": "wrong-actor-maeve-snatches",
+      "tags": [
+        "EV"
+      ],
+      "patterns": [
+        "^maeve\\b.*\\bsnatch\\w*\\b.*\\bcompass\\b"
+      ]
+    }
+  ],
+  "end": {
+    "present_patterns": [
+      "oren"
+    ],
+    "situation_patterns": [
+      "compass",
+      "belt"
+    ],
+    "loc_patterns": [
+      "west passage entrance"
+    ],
+    "forbidden_loc_patterns": [
+      "crate"
+    ]
+  }
+}

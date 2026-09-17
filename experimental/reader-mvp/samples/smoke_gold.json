@@ -1,0 +1,338 @@
+{
+  "fixture": "Synthetic B17 smoke story",
+  "segment_idx": 1,
+  "notes": "Gold checks Chapter 1 semantic memory. It intentionally does not require exact model wording.",
+  "required": [
+    {
+      "id": "levin-tests-handle",
+      "weight": 2,
+      "tags": [
+        "EV"
+      ],
+      "p": 2,
+      "patterns": [
+        "levin",
+        "test",
+        "brass handle"
+      ]
+    },
+    {
+      "id": "mara-father-welded-claim",
+      "weight": 2,
+      "tags": [
+        "SAY"
+      ],
+      "p": 2,
+      "patterns": [
+        "mara",
+        "father",
+        "weld",
+        "shut",
+        "died"
+      ]
+    },
+    {
+      "id": "sava-arrives",
+      "weight": 1,
+      "tags": [
+        "EV"
+      ],
+      "p": 3,
+      "patterns": [
+        "sava",
+        "arriv"
+      ]
+    },
+    {
+      "id": "sava-hands-envelope",
+      "weight": 1,
+      "tags": [
+        "EV"
+      ],
+      "p": 3,
+      "patterns": [
+        "sava",
+        "hand",
+        "envelope"
+      ]
+    },
+    {
+      "id": "envelope-b17-blue-pencil",
+      "weight": 2,
+      "tags": [
+        "DET"
+      ],
+      "p": 3,
+      "patterns": [
+        "envelope",
+        "b17",
+        "blue pencil"
+      ]
+    },
+    {
+      "id": "mara-only-invoice-claim",
+      "weight": 2,
+      "tags": [
+        "SAY"
+      ],
+      "p": 5,
+      "patterns": [
+        "mara",
+        "only an invoice"
+      ]
+    },
+    {
+      "id": "mara-opens-envelope",
+      "weight": 2,
+      "tags": [
+        "EV"
+      ],
+      "p": 6,
+      "patterns": [
+        "mara",
+        "open",
+        "envelope"
+      ]
+    },
+    {
+      "id": "railway-receipt",
+      "weight": 2,
+      "tags": [
+        "DET",
+        "EV"
+      ],
+      "p": 6,
+      "patterns": [
+        "railway receipt"
+      ]
+    },
+    {
+      "id": "note-message",
+      "weight": 2,
+      "tags": [
+        "Q",
+        "DET"
+      ],
+      "p": 6,
+      "patterns": [
+        "eastern stair",
+        "opened yesterday",
+        "come alone"
+      ]
+    },
+    {
+      "id": "mara-reads-note",
+      "weight": 1,
+      "tags": [
+        "EV"
+      ],
+      "p": 6,
+      "patterns": [
+        "mara",
+        "read",
+        "note"
+      ]
+    },
+    {
+      "id": "mara-burns-note",
+      "weight": 2,
+      "tags": [
+        "EV"
+      ],
+      "p": 6,
+      "patterns": [
+        "mara",
+        "burn",
+        "note"
+      ]
+    },
+    {
+      "id": "mara-keeps-receipt",
+      "weight": 2,
+      "tags": [
+        "EV"
+      ],
+      "p": 6,
+      "patterns": [
+        "mara",
+        "(keep|kept|retain|retained)",
+        "receipt"
+      ]
+    }
+  ],
+  "forbidden": [
+    {
+      "id": "false-new-knowledge-levin-stair-sealed",
+      "tags": [
+        "KN"
+      ],
+      "patterns": [
+        "levin",
+        "stair",
+        "seal"
+      ]
+    },
+    {
+      "id": "wrong-subject-mara-embarrassed",
+      "tags": [
+        "ST"
+      ],
+      "patterns": [
+        "mara",
+        "embarrass"
+      ]
+    },
+    {
+      "id": "hedged-sava-intent-promoted-to-fact",
+      "tags": [
+        "EV",
+        "ST",
+        "KN"
+      ],
+      "epistemic": "EXPLICIT",
+      "patterns": [
+        "^sava\\b(?!.*\\bas if\\b).*\\bwant\\w*\\b.*\\bcorrect\\w*\\b"
+      ]
+    },
+    {
+      "id": "wrong-speaker-only-invoice",
+      "tags": [
+        "SAY"
+      ],
+      "patterns": [
+        "levin",
+        "only an invoice"
+      ]
+    },
+    {
+      "id": "unsupported-mara-wary-state",
+      "tags": [
+        "ST"
+      ],
+      "epistemic": "EXPLICIT",
+      "patterns": [
+        "mara",
+        "wary"
+      ]
+    },
+    {
+      "id": "unsupported-mara-observant-state",
+      "tags": [
+        "ST"
+      ],
+      "epistemic": "EXPLICIT",
+      "patterns": [
+        "mara",
+        "observant"
+      ]
+    },
+    {
+      "id": "unsupported-mara-sava-trust-loss",
+      "tags": [
+        "REL"
+      ],
+      "patterns": [
+        "mara",
+        "sava",
+        "trust_loss"
+      ]
+    },
+    {
+      "id": "document-text-promoted-to-say",
+      "tags": [
+        "SAY"
+      ],
+      "patterns": [
+        "eastern stair",
+        "opened yesterday"
+      ]
+    },
+    {
+      "id": "copied-example-key-upstairs",
+      "tags": [
+        "SAY"
+      ],
+      "patterns": [
+        "key upstairs"
+      ]
+    },
+    {
+      "id": "wrong-subject-mara-tests-handle",
+      "tags": [
+        "EV"
+      ],
+      "patterns": [
+        "mara",
+        "test",
+        "handle"
+      ]
+    },
+    {
+      "id": "unsupported-mara-levin-trust-loss",
+      "tags": [
+        "REL"
+      ],
+      "patterns": [
+        "mara",
+        "levin",
+        "trust_loss"
+      ]
+    },
+    {
+      "id": "unsupported-sava-mara-lie-revealed",
+      "tags": [
+        "REL"
+      ],
+      "patterns": [
+        "sava",
+        "mara",
+        "lie_revealed"
+      ]
+    },
+    {
+      "id": "wrong-direction-mara-hands-envelope",
+      "tags": [
+        "EV"
+      ],
+      "patterns": [
+        "^mara\\b.*\\bhand\\w*\\b.*\\benvelope\\b"
+      ]
+    },
+    {
+      "id": "wrong-subject-mara-asks-courier-news",
+      "tags": [
+        "EV"
+      ],
+      "patterns": [
+        "^mara\\b.*\\bask\\w*\\b.*\\bcourier\\b.*\\bnews\\b"
+      ]
+    }
+  ],
+  "end": {
+    "present_patterns": [
+      "mara"
+    ],
+    "situation_patterns": [
+      "burn",
+      "note",
+      "(keep|kept|retain|retained)",
+      "receipt"
+    ],
+    "forbidden_loc_patterns": [
+      "coat",
+      "envelope",
+      "notebook",
+      "stove",
+      "receipt",
+      "workshop"
+    ]
+  },
+  "story": "smoke_story.txt",
+  "case": "b17-baseline",
+  "focus": [
+    "role-direction",
+    "document-vs-speech",
+    "tail-action-coverage",
+    "end-location"
+  ]
+}

@@ -1,0 +1,714 @@
+{
+  "suite_id": "suite-1789576469674817552",
+  "prompt_sha256": "528ce83dfe208d1551b71547e6cef16c3051971570c81331e9efc0bdc83f4ce0",
+  "sampling": {
+    "extraction_temperature": 0.0,
+    "extraction_seed": 424242,
+    "cache_prompt": false
+  },
+  "llama": {
+    "ok": true,
+    "status": 200,
+    "body": "{\"status\":\"ok\"}"
+  },
+  "fixtures": [
+    {
+      "case": "document-vs-speech",
+      "fixture": "Synthetic document versus speech story",
+      "focus": [
+        "document-vs-speech",
+        "speaker-attribution",
+        "action-coverage",
+        "end-location"
+      ],
+      "gold": "samples/benchmarks/document_gold.json",
+      "story": "samples/benchmarks/document_story.txt",
+      "book_id": 62,
+      "profile": "ROBUST-A",
+      "contract_pass": false,
+      "elapsed": 9.730336418997467,
+      "attempts": [
+        {
+          "profile": "FAST",
+          "contract_pass": false,
+          "stats": {
+            "parsed": 11,
+            "ignored": 0,
+            "quarantined": 2,
+            "no_span": 2,
+            "span_needed": 8,
+            "span_valid": 6,
+            "span_validity": 0.75,
+            "junk_ratio": 0.0,
+            "content_count": 7,
+            "repaired_prefix": 0,
+            "disallowed": 0,
+            "shape_invalid": 0,
+            "end_tail_miss": 0
+          }
+        },
+        {
+          "profile": "ROBUST-A/1",
+          "contract_pass": false,
+          "stats": {
+            "parsed": 7,
+            "ignored": 0,
+            "quarantined": 1,
+            "no_span": 0,
+            "span_needed": 4,
+            "span_valid": 4,
+            "span_validity": 1.0,
+            "junk_ratio": 0.0,
+            "content_count": 3,
+            "repaired_prefix": 0,
+            "disallowed": 1,
+            "shape_invalid": 1,
+            "end_tail_miss": 0
+          }
+        },
+        {
+          "profile": "ROBUST-A/2",
+          "contract_pass": true,
+          "stats": {
+            "parsed": 4,
+            "ignored": 0,
+            "quarantined": 2,
+            "no_span": 0,
+            "span_needed": 5,
+            "span_valid": 5,
+            "span_validity": 1.0,
+            "junk_ratio": 0.0,
+            "content_count": 4,
+            "repaired_prefix": 0,
+            "disallowed": 7,
+            "shape_invalid": 2,
+            "end_tail_miss": 0
+          }
+        },
+        {
+          "profile": "ROBUST-A",
+          "contract_pass": false,
+          "stats": {
+            "parsed": 11,
+            "ignored": 0,
+            "quarantined": 3,
+            "no_span": 0,
+            "span_needed": 9,
+            "span_valid": 9,
+            "span_validity": 1.0,
+            "junk_ratio": 0.0,
+            "content_count": 7,
+            "repaired_prefix": 0,
+            "disallowed": 8,
+            "shape_invalid": 3,
+            "end_tail_miss": 0
+          }
+        }
+      ],
+      "scores": {
+        "semantic_coverage": 0.0,
+        "grounded_coverage": 0.0,
+        "forbidden_pass": 1.0,
+        "end_pass": 0.25,
+        "overall": 0.225
+      },
+      "required": [
+        {
+          "id": "jonas-gives-clipboard",
+          "weight": 1.0,
+          "semantic": false,
+          "provenance": false,
+          "expected_p": 2,
+          "matches": []
+        },
+        {
+          "id": "generator-report-content",
+          "weight": 2.0,
+          "semantic": false,
+          "provenance": false,
+          "expected_p": 2,
+          "matches": []
+        },
+        {
+          "id": "mira-reads-warning",
+          "weight": 2.0,
+          "semantic": false,
+          "provenance": false,
+          "expected_p": 3,
+          "matches": []
+        },
+        {
+          "id": "mira-copies-time",
+          "weight": 1.0,
+          "semantic": false,
+          "provenance": false,
+          "expected_p": 3,
+          "matches": []
+        },
+        {
+          "id": "mira-folds-report",
+          "weight": 1.0,
+          "semantic": false,
+          "provenance": false,
+          "expected_p": 3,
+          "matches": []
+        },
+        {
+          "id": "mira-wait-mechanic-speech",
+          "weight": 2.0,
+          "semantic": false,
+          "provenance": false,
+          "expected_p": 3,
+          "matches": []
+        },
+        {
+          "id": "mira-places-report",
+          "weight": 1.0,
+          "semantic": false,
+          "provenance": false,
+          "expected_p": 4,
+          "matches": []
+        },
+        {
+          "id": "mira-call-dena-speech",
+          "weight": 2.0,
+          "semantic": false,
+          "provenance": false,
+          "expected_p": 4,
+          "matches": []
+        }
+      ],
+      "forbidden": [
+        {
+          "id": "report-content-promoted-to-say",
+          "passed": true,
+          "matches": []
+        },
+        {
+          "id": "wrong-speaker-wait-mechanic",
+          "passed": true,
+          "matches": []
+        },
+        {
+          "id": "wrong-speaker-call-dena",
+          "passed": true,
+          "matches": []
+        }
+      ],
+      "end": {
+        "value": {
+          "present": "",
+          "loc": "",
+          "situation": ""
+        },
+        "checks": {
+          "present": false,
+          "situation": false,
+          "loc_not_object": true,
+          "loc": false
+        }
+      },
+      "paragraph_coverage": [
+        {
+          "p": 2,
+          "tokens": 52,
+          "observations": 0,
+          "event_count": 0,
+          "tags": []
+        },
+        {
+          "p": 3,
+          "tokens": 42,
+          "observations": 0,
+          "event_count": 0,
+          "tags": []
+        },
+        {
+          "p": 4,
+          "tokens": 37,
+          "observations": 0,
+          "event_count": 0,
+          "tags": []
+        }
+      ],
+      "raw_output": "SUM: Jonas delivered an incident report to Mira regarding Generator 4, which failed at 02:10. Mira noted the time and folded the report. Mira instructed Jonas to call Dena when the mechanic arrived. @P04\nWHO: Jonas | Mira | Dena\nLOC: control room | loading bay | radio\nTIME: 02:10 | 02:10 ~INF @P02, @P03\nEV: Jonas gave Mira a clipboard @P01\nSAY: Jonas | “It says we wait for the mechanic” @P03\nSAY: Mira | “It says we wait for the mechanic” @P03\nST: Mira | state | concerned ~INF @P03\nDET: report | incident report | Generator 4 | “Generator 4 failed at 02:10. Do not restart.” @P02\nREL: Mira -> Jonas | instruction | wait\nTH+: What is the mechanic's status?\nDET: notebook | Mira’s notebook @P03\nEND: present=Mira | loc=control room | situation=Mira places the folded report under the radio and tells Jonas to call Dena\n\n--- ROBUST-A ---\nSUM: Jonas delivered an incident report to Mira regarding Generator 4, which failed at 02:10. Mira noted the time and folded the report. She instructed Jonas to call Dena when the mechanic arrived and remained in the control room. @P04\nWHO: Jonas, Mira, Dena\nLOC: control room, loading bay\nTIME: 02:10, 02:10 ~INF, before dawn\nEV: Jonas carried a clipboard into the control room @P02\nSAY: Mira | “It says we wait for the mechanic” @P03\nSAY: Mira | “Call Dena when the mechanic arrives” @P04\nDET: incident report, clipboard, notebook, radio @P02, P03, P04\nEND: present=Mira, loc=control room, situation=Mira remains in the control room after Jonas leaves @P04\nSUM: Jonas delivered an incident report to Mira regarding Generator 4’s failure at 02:10. Mira noted the time and folded the report. She instructed Jonas to call Dena when the mechanic arrived. Mira remained in the control room. @P04\nWHO: Jonas | Mira | Dena\nLOC: control room | loading bay\nTIME: 02:10 | dawn\nEV: Jonas delivered a clipboard @P02\nSAY: Jonas | “It says we wait for the mechanic” @P03\nSAY: Mira | “It says we wait for the mechanic” @P03\nST: Mira | state | concerned ~INF @P03\nDET: report | incident report | Generator 4 @P02\nDET: notebook | Mira’s notebook @P03\nREL: Jonas -> Mira | request | to inform @P03\nTH+: Will the mechanic arrive soon? @P04\nKN: Mira | Generator 4 failed at 02:10 @P02"
+    },
+    {
+      "case": "end-location",
+      "fixture": "Synthetic end location story",
+      "focus": [
+        "end-location",
+        "remote-character-destination",
+        "speaker-attribution",
+        "action-coverage"
+      ],
+      "gold": "samples/benchmarks/end_location_gold.json",
+      "story": "samples/benchmarks/end_location_story.txt",
+      "book_id": 63,
+      "profile": "FAST",
+      "contract_pass": true,
+      "elapsed": 4.269493664000038,
+      "attempts": [
+        {
+          "profile": "FAST",
+          "contract_pass": true,
+          "stats": {
+            "parsed": 23,
+            "ignored": 0,
+            "quarantined": 1,
+            "no_span": 1,
+            "span_needed": 17,
+            "span_valid": 16,
+            "span_validity": 0.9411764705882353,
+            "junk_ratio": 0.0,
+            "content_count": 15,
+            "repaired_prefix": 0,
+            "disallowed": 0,
+            "shape_invalid": 0,
+            "end_tail_miss": 0
+          }
+        }
+      ],
+      "scores": {
+        "semantic_coverage": 0.6666666666666666,
+        "grounded_coverage": 0.6666666666666666,
+        "forbidden_pass": 1.0,
+        "end_pass": 0.75,
+        "overall": 0.7416666666666667
+      },
+      "required": [
+        {
+          "id": "bruno-workshop-speech",
+          "weight": 1.0,
+          "semantic": true,
+          "provenance": true,
+          "expected_p": 2,
+          "matches": [
+            {
+              "id": 689,
+              "tag": "SAY",
+              "payload": "Bruno | he needed to repair the pump in the workshop",
+              "epistemic": "EXPLICIT",
+              "p": [
+                2
+              ]
+            }
+          ]
+        },
+        {
+          "id": "ada-stay-ledger-speech",
+          "weight": 1.0,
+          "semantic": false,
+          "provenance": false,
+          "expected_p": 2,
+          "matches": []
+        },
+        {
+          "id": "bruno-leaves-workshop",
+          "weight": 2.0,
+          "semantic": false,
+          "provenance": false,
+          "expected_p": 3,
+          "matches": []
+        },
+        {
+          "id": "ada-opens-cabinet",
+          "weight": 1.0,
+          "semantic": true,
+          "provenance": true,
+          "expected_p": 3,
+          "matches": [
+            {
+              "id": 691,
+              "tag": "EV",
+              "payload": "Ada remained in the kitchen, opened the wall cabinet",
+              "epistemic": "EXPLICIT",
+              "p": [
+                3
+              ]
+            }
+          ]
+        },
+        {
+          "id": "ada-removes-ledger",
+          "weight": 1.0,
+          "semantic": true,
+          "provenance": true,
+          "expected_p": 3,
+          "matches": [
+            {
+              "id": 693,
+              "tag": "EV",
+              "payload": "Ada removed a green ledger",
+              "epistemic": "EXPLICIT",
+              "p": [
+                3
+              ]
+            }
+          ]
+        },
+        {
+          "id": "ada-writes-pump-belt",
+          "weight": 2.0,
+          "semantic": true,
+          "provenance": true,
+          "expected_p": 4,
+          "matches": [
+            {
+              "id": 698,
+              "tag": "EV",
+              "payload": "Ada wrote “pump belt” in the ledger",
+              "epistemic": "EXPLICIT",
+              "p": [
+                4
+              ]
+            }
+          ]
+        },
+        {
+          "id": "ada-returns-ledger",
+          "weight": 1.0,
+          "semantic": true,
+          "provenance": true,
+          "expected_p": 4,
+          "matches": [
+            {
+              "id": 700,
+              "tag": "EV",
+              "payload": "Ada returned the ledger to the cabinet",
+              "epistemic": "EXPLICIT",
+              "p": [
+                4
+              ]
+            }
+          ]
+        }
+      ],
+      "forbidden": [
+        {
+          "id": "ada-end-workshop-action",
+          "passed": true,
+          "matches": []
+        },
+        {
+          "id": "wrong-speaker-ada-repair-workshop",
+          "passed": true,
+          "matches": []
+        }
+      ],
+      "end": {
+        "value": {
+          "present": "Ada, Bruno",
+          "loc": "kitchen",
+          "situation": "Ada answered the phone and recorded the pump belt in the ledger"
+        },
+        "checks": {
+          "present": true,
+          "situation": false,
+          "loc_not_object": true,
+          "loc": true
+        }
+      },
+      "paragraph_coverage": [
+        {
+          "p": 2,
+          "tokens": 33,
+          "observations": 3,
+          "event_count": 1,
+          "tags": [
+            "EV",
+            "SAY",
+            "ST"
+          ]
+        },
+        {
+          "p": 3,
+          "tokens": 27,
+          "observations": 3,
+          "event_count": 2,
+          "tags": [
+            "EV",
+            "DET",
+            "EV"
+          ]
+        },
+        {
+          "p": 4,
+          "tokens": 39,
+          "observations": 9,
+          "event_count": 5,
+          "tags": [
+            "EV",
+            "EV",
+            "SAY",
+            "DET",
+            "EV",
+            "ST",
+            "EV",
+            "DET",
+            "EV"
+          ]
+        }
+      ],
+      "raw_output": "SUM: Ada and Bruno ate breakfast in the kitchen. Bruno needed to repair the pump in the workshop, and Ada would check the household ledger. @P02\nWHO: Ada, Bruno\nLOC: kitchen\nTIME: breakfast\nEV: Bruno said he needed to repair the pump in the workshop @P02\nSAY: Bruno | he needed to repair the pump in the workshop @P02\nST: Ada | intention | check the household ledger @P02\nEV: Ada remained in the kitchen, opened the wall cabinet @P03\nDET: green ledger @P03\nEV: Ada removed a green ledger @P03\nLOC: wall cabinet\nTIME: later\nEV: Bruno called from the workshop phone @P04\nREL: Bruno -> Ada | need | repair\nEV: Ada answered from the kitchen @P04\nSAY: Ada | answered from the kitchen @P04\nDET: pump belt @P04\nEV: Ada wrote “pump belt” in the ledger @P04\nST: Ada | state | wrote “pump belt” in the ledger @P04\nEV: Ada returned the ledger to the cabinet @P04\nDET: green ledger @P04\nLOC: wall cabinet\nEV: Ada stayed in the kitchen @P04\nEND: present=Ada, Bruno | loc=kitchen | situation=Ada answered the phone and recorded the pump belt in the ledger @P04"
+    },
+    {
+      "case": "hedged-perception",
+      "fixture": "Synthetic hedged perception story",
+      "focus": [
+        "hedged-perception",
+        "state-vs-claim",
+        "action-coverage",
+        "end-location"
+      ],
+      "gold": "samples/benchmarks/hedge_gold.json",
+      "story": "samples/benchmarks/hedge_story.txt",
+      "book_id": 64,
+      "profile": "ROBUST-A",
+      "contract_pass": true,
+      "elapsed": 8.567636324998603,
+      "attempts": [
+        {
+          "profile": "FAST",
+          "contract_pass": false,
+          "stats": {
+            "parsed": 10,
+            "ignored": 0,
+            "quarantined": 3,
+            "no_span": 3,
+            "span_needed": 8,
+            "span_valid": 5,
+            "span_validity": 0.625,
+            "junk_ratio": 0.0,
+            "content_count": 6,
+            "repaired_prefix": 0,
+            "disallowed": 0,
+            "shape_invalid": 0,
+            "end_tail_miss": 0
+          }
+        },
+        {
+          "profile": "ROBUST-A/1",
+          "contract_pass": true,
+          "stats": {
+            "parsed": 7,
+            "ignored": 0,
+            "quarantined": 0,
+            "no_span": 0,
+            "span_needed": 3,
+            "span_valid": 3,
+            "span_validity": 1.0,
+            "junk_ratio": 0.0,
+            "content_count": 2,
+            "repaired_prefix": 0,
+            "disallowed": 1,
+            "shape_invalid": 0,
+            "end_tail_miss": 0
+          }
+        },
+        {
+          "profile": "ROBUST-A/2",
+          "contract_pass": true,
+          "stats": {
+            "parsed": 4,
+            "ignored": 0,
+            "quarantined": 2,
+            "no_span": 0,
+            "span_needed": 6,
+            "span_valid": 6,
+            "span_validity": 1.0,
+            "junk_ratio": 0.0,
+            "content_count": 4,
+            "repaired_prefix": 0,
+            "disallowed": 6,
+            "shape_invalid": 2,
+            "end_tail_miss": 0
+          }
+        },
+        {
+          "profile": "ROBUST-A",
+          "contract_pass": true,
+          "stats": {
+            "parsed": 11,
+            "ignored": 0,
+            "quarantined": 2,
+            "no_span": 0,
+            "span_needed": 9,
+            "span_valid": 9,
+            "span_validity": 1.0,
+            "junk_ratio": 0.0,
+            "content_count": 6,
+            "repaired_prefix": 0,
+            "disallowed": 7,
+            "shape_invalid": 2,
+            "end_tail_miss": 0
+          }
+        }
+      ],
+      "scores": {
+        "semantic_coverage": 0.3,
+        "grounded_coverage": 0.3,
+        "forbidden_pass": 1.0,
+        "end_pass": 0.75,
+        "overall": 0.48500000000000004
+      },
+      "required": [
+        {
+          "id": "keva-crosses-hall",
+          "weight": 1.0,
+          "semantic": true,
+          "provenance": true,
+          "expected_p": 2,
+          "matches": [
+            {
+              "id": 703,
+              "tag": "EV",
+              "payload": "Keva crossed the station hall with a canvas bag",
+              "epistemic": "EXPLICIT",
+              "p": [
+                2
+              ]
+            }
+          ]
+        },
+        {
+          "id": "keva-checks-handle",
+          "weight": 1.0,
+          "semantic": false,
+          "provenance": false,
+          "expected_p": 2,
+          "matches": []
+        },
+        {
+          "id": "keva-waits",
+          "weight": 1.0,
+          "semantic": false,
+          "provenance": false,
+          "expected_p": 3,
+          "matches": []
+        },
+        {
+          "id": "keva-walks-platform",
+          "weight": 1.0,
+          "semantic": false,
+          "provenance": false,
+          "expected_p": 3,
+          "matches": []
+        },
+        {
+          "id": "rian-frightened-claim",
+          "weight": 2.0,
+          "semantic": true,
+          "provenance": true,
+          "expected_p": 3,
+          "matches": [
+            {
+              "id": 704,
+              "tag": "SAY",
+              "payload": "Rian | She looked frightened to me",
+              "epistemic": "EXPLICIT",
+              "p": [
+                3
+              ]
+            }
+          ]
+        },
+        {
+          "id": "keva-boards",
+          "weight": 2.0,
+          "semantic": false,
+          "provenance": false,
+          "expected_p": 4,
+          "matches": []
+        },
+        {
+          "id": "keva-places-bag",
+          "weight": 1.0,
+          "semantic": false,
+          "provenance": false,
+          "expected_p": 4,
+          "matches": []
+        },
+        {
+          "id": "keva-opens-book",
+          "weight": 1.0,
+          "semantic": false,
+          "provenance": false,
+          "expected_p": 4,
+          "matches": []
+        }
+      ],
+      "forbidden": [
+        {
+          "id": "heard-sound-promoted-to-fact",
+          "passed": true,
+          "matches": []
+        },
+        {
+          "id": "frightened-promoted-to-state",
+          "passed": true,
+          "matches": []
+        },
+        {
+          "id": "rian-knows-keva-frightened",
+          "passed": true,
+          "matches": []
+        }
+      ],
+      "end": {
+        "value": {
+          "present": "Keva",
+          "loc": "rear carriage",
+          "situation": "Keva boards the train"
+        },
+        "checks": {
+          "present": true,
+          "situation": false,
+          "loc_not_object": true,
+          "loc": true
+        }
+      },
+      "paragraph_coverage": [
+        {
+          "p": 2,
+          "tokens": 34,
+          "observations": 3,
+          "event_count": 1,
+          "tags": [
+            "EV",
+            "DET",
+            "DET"
+          ]
+        },
+        {
+          "p": 3,
+          "tokens": 46,
+          "observations": 2,
+          "event_count": 0,
+          "tags": [
+            "SAY",
+            "ST"
+          ]
+        },
+        {
+          "p": 4,
+          "tokens": 44,
+          "observations": 1,
+          "event_count": 0,
+          "tags": [
+            "DET"
+          ]
+        }
+      ],
+      "raw_output": "SUM: Keva crossed the station hall with a canvas bag. Rian watched from the ticket booth as Keva checked the service door. Keva then walked to the platform and waited for a sound behind the door. @P03\nWHO: Keva, Rian\nLOC: station hall, ticket booth, service door, platform, rear carriage\nTIME: noon\nEV: Keva crossed the station hall with a canvas bag @P01\nSAY: Rian | “She looked frightened to me” @P03\nST: Keva | apprehensive | worried ~INF @P03\nKN: Rian | observation | Keva appeared frightened @P03\nREL: Rian -> Keva | observation | concern\nTH+: What did Keva hear behind the door?\nDET: canvas bag\nQ: “She looked frightened to me” @P03\nEND: present=Keva, Rian | loc=rear carriage | situation=Keva boards the train\n\n--- ROBUST-A ---\nSUM: Keva crossed the station hall with a canvas bag. Rian watched her as she checked the service door handle and then walked to the platform. A train arrived and Keva boarded it, placing the bag under her seat and opening a paperback. Rian left through the front doors while Keva stayed on the train. @P04\nWHO: Keva, Rian\nLOC: station hall, ticket booth, service door, platform, rear carriage\nTIME: noon\nEV: Keva crossed the station hall with a canvas bag @P02\nSAY: Rian | She looked frightened to me @P03\nDET: canvas bag @P02\nEND: present=Keva | loc=rear carriage | situation=Keva boards the train @P04\nSUM: Keva crossed the station hall with a canvas bag. Rian watched her as she checked the service door handle and then walked to the platform. A train arrived and Keva boarded it, placing a bag under her seat and opening a paperback. Rian left through the front doors. @P04\nWHO: Keva, Rian\nLOC: station hall, ticket booth, service door, platform, rear carriage\nTIME: noon\nEV: Keva crossed the station hall @P02\nSAY: Rian | “She looked frightened to me” @P03\nST: Keva | apprehensive | worried ~INF @P03\nKN: Rian | Keva appeared frightened @P03\nREL: Rian -> Keva | observation | worried ~INF @P03\nDET: canvas bag @P02\nDET: locked service door @P02\nDET: paperback @P04"
+    }
+  ],
+  "macro": {
+    "semantic_coverage": 0.3222222222222222,
+    "grounded_coverage": 0.3222222222222222,
+    "forbidden_pass": 1.0,
+    "end_pass": 0.5833333333333334,
+    "overall": 0.48388888888888887
+  },
+  "elapsed_total": 22.567466407996108
+}

@@ -1,0 +1,155 @@
+{
+  "fixture": "Generalization shared-subject chain",
+  "story": "benchmarks/shared_subject_chain_story.txt",
+  "case": "gen-shared-subject-chain",
+  "focus": [
+    "shared-subject",
+    "coordinated-actions",
+    "unseen-verbs",
+    "end-location"
+  ],
+  "segment_idx": 1,
+  "notes": "Tests exhaustive action coverage across coordinated predicates without repeating the subject.",
+  "required": [
+    {
+      "id": "elena-unlatches-hatch",
+      "weight": 1,
+      "tags": [
+        "EV"
+      ],
+      "p": 2,
+      "patterns": [
+        "elena",
+        "unlatch",
+        "maintenance hatch"
+      ]
+    },
+    {
+      "id": "elena-descends-ladder",
+      "weight": 1,
+      "tags": [
+        "EV"
+      ],
+      "p": 2,
+      "patterns": [
+        "elena",
+        "descend",
+        "iron ladder"
+      ]
+    },
+    {
+      "id": "elena-retrieves-canister",
+      "weight": 2,
+      "tags": [
+        "EV"
+      ],
+      "p": 2,
+      "patterns": [
+        "elena",
+        "retriev",
+        "sealed canister"
+      ]
+    },
+    {
+      "id": "elena-climbs-back",
+      "weight": 1,
+      "tags": [
+        "EV"
+      ],
+      "p": 2,
+      "patterns": [
+        "elena",
+        "climb",
+        "platform"
+      ]
+    },
+    {
+      "id": "elena-crosses-catwalk",
+      "weight": 1,
+      "tags": [
+        "EV"
+      ],
+      "p": 3,
+      "patterns": [
+        "elena",
+        "cross",
+        "catwalk"
+      ]
+    },
+    {
+      "id": "elena-returns-canister",
+      "weight": 2,
+      "tags": [
+        "EV"
+      ],
+      "p": 3,
+      "patterns": [
+        "elena",
+        "return",
+        "tomas",
+        "canister"
+      ]
+    },
+    {
+      "id": "tomas-tucks-canister",
+      "weight": 1,
+      "tags": [
+        "EV"
+      ],
+      "p": 3,
+      "patterns": [
+        "tomas",
+        "tuck",
+        "canister",
+        "coat"
+      ]
+    },
+    {
+      "id": "tomas-disappears-corridor",
+      "weight": 1,
+      "tags": [
+        "EV"
+      ],
+      "p": 4,
+      "patterns": [
+        "tomas",
+        "disappear",
+        "turbine corridor"
+      ]
+    }
+  ],
+  "forbidden": [
+    {
+      "id": "wrong-actor-tomas-retrieves",
+      "tags": [
+        "EV"
+      ],
+      "patterns": [
+        "^tomas\\b.*\\bretriev\\w*\\b.*\\bcanister\\b"
+      ]
+    },
+    {
+      "id": "wrong-actor-elena-tucks",
+      "tags": [
+        "EV"
+      ],
+      "patterns": [
+        "^elena\\b.*\\btuck\\w*\\b.*\\bcanister\\b"
+      ]
+    }
+  ],
+  "end": {
+    "present_patterns": [
+      "elena"
+    ],
+    "situation_patterns": [
+      "hatch"
+    ],
+    "loc_patterns": [
+      "floodgate platform"
+    ],
+    "forbidden_loc_patterns": [
+      "turbine corridor"
+    ]
+  }
+}

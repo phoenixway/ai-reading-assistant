@@ -1,0 +1,1447 @@
+{
+  "suite_id": "suite-1789575573086571313",
+  "prompt_sha256": "528ce83dfe208d1551b71547e6cef16c3051971570c81331e9efc0bdc83f4ce0",
+  "llama": {
+    "ok": true,
+    "status": 200,
+    "body": "{\"status\":\"ok\"}"
+  },
+  "fixtures": [
+    {
+      "case": "b17-baseline",
+      "fixture": "Synthetic B17 smoke story",
+      "focus": [
+        "role-direction",
+        "document-vs-speech",
+        "tail-action-coverage",
+        "end-location"
+      ],
+      "gold": "samples/smoke_gold.json",
+      "story": "samples/smoke_story.txt",
+      "book_id": 22,
+      "profile": "FAST+COVERAGE",
+      "contract_pass": true,
+      "elapsed": 6.427645084000687,
+      "attempts": [
+        {
+          "profile": "FAST",
+          "contract_pass": true,
+          "stats": {
+            "parsed": 11,
+            "ignored": 0,
+            "quarantined": 3,
+            "no_span": 0,
+            "span_needed": 10,
+            "span_valid": 10,
+            "span_validity": 1.0,
+            "junk_ratio": 0.0,
+            "content_count": 6,
+            "repaired_prefix": 0,
+            "disallowed": 0,
+            "shape_invalid": 3,
+            "end_tail_miss": 0
+          }
+        },
+        {
+          "profile": "ACTION-COVERAGE",
+          "contract_pass": true,
+          "stats": {
+            "parsed": 10,
+            "ignored": 0,
+            "quarantined": 0,
+            "no_span": 0,
+            "span_needed": 10,
+            "span_valid": 10,
+            "span_validity": 1.0,
+            "junk_ratio": 0.0,
+            "content_count": 10,
+            "repaired_prefix": 0,
+            "disallowed": 0,
+            "shape_invalid": 0,
+            "end_tail_miss": 0
+          },
+          "targets": [
+            3,
+            5,
+            6
+          ]
+        }
+      ],
+      "scores": {
+        "semantic_coverage": 0.5714285714285714,
+        "grounded_coverage": 0.5714285714285714,
+        "forbidden_pass": 1.0,
+        "end_pass": 0.3333333333333333,
+        "overall": 0.6333333333333333
+      },
+      "required": [
+        {
+          "id": "levin-tests-handle",
+          "weight": 2.0,
+          "semantic": true,
+          "provenance": true,
+          "expected_p": 2,
+          "matches": [
+            {
+              "id": 186,
+              "tag": "EV",
+              "payload": "Levin tested the brass handle",
+              "epistemic": "EXPLICIT",
+              "p": [
+                2
+              ]
+            }
+          ]
+        },
+        {
+          "id": "mara-father-welded-claim",
+          "weight": 2.0,
+          "semantic": true,
+          "provenance": true,
+          "expected_p": 2,
+          "matches": [
+            {
+              "id": 188,
+              "tag": "SAY",
+              "payload": "Mara | “My father welded it shut before he died”",
+              "epistemic": "EXPLICIT",
+              "p": [
+                2
+              ]
+            }
+          ]
+        },
+        {
+          "id": "sava-arrives",
+          "weight": 1.0,
+          "semantic": true,
+          "provenance": true,
+          "expected_p": 3,
+          "matches": [
+            {
+              "id": 192,
+              "tag": "EV",
+              "payload": "Sava arrived",
+              "epistemic": "EXPLICIT",
+              "p": [
+                3
+              ]
+            }
+          ]
+        },
+        {
+          "id": "sava-hands-envelope",
+          "weight": 1.0,
+          "semantic": true,
+          "provenance": true,
+          "expected_p": 3,
+          "matches": [
+            {
+              "id": 193,
+              "tag": "EV",
+              "payload": "Sava handed Mara an envelope",
+              "epistemic": "EXPLICIT",
+              "p": [
+                3
+              ]
+            }
+          ]
+        },
+        {
+          "id": "envelope-b17-blue-pencil",
+          "weight": 2.0,
+          "semantic": true,
+          "provenance": true,
+          "expected_p": 3,
+          "matches": [
+            {
+              "id": 190,
+              "tag": "DET",
+              "payload": "envelope | narrow grey | B17 in blue pencil",
+              "epistemic": "EXPLICIT",
+              "p": [
+                3
+              ]
+            }
+          ]
+        },
+        {
+          "id": "mara-only-invoice-claim",
+          "weight": 2.0,
+          "semantic": true,
+          "provenance": true,
+          "expected_p": 5,
+          "matches": [
+            {
+              "id": 189,
+              "tag": "SAY",
+              "payload": "Mara | “Only an invoice”",
+              "epistemic": "EXPLICIT",
+              "p": [
+                5
+              ]
+            }
+          ]
+        },
+        {
+          "id": "mara-opens-envelope",
+          "weight": 2.0,
+          "semantic": true,
+          "provenance": true,
+          "expected_p": 6,
+          "matches": [
+            {
+              "id": 198,
+              "tag": "EV",
+              "payload": "Mara opened the envelope",
+              "epistemic": "EXPLICIT",
+              "p": [
+                6
+              ]
+            }
+          ]
+        },
+        {
+          "id": "railway-receipt",
+          "weight": 2.0,
+          "semantic": false,
+          "provenance": false,
+          "expected_p": 6,
+          "matches": []
+        },
+        {
+          "id": "note-message",
+          "weight": 2.0,
+          "semantic": false,
+          "provenance": false,
+          "expected_p": 6,
+          "matches": []
+        },
+        {
+          "id": "mara-reads-note",
+          "weight": 1.0,
+          "semantic": false,
+          "provenance": false,
+          "expected_p": 6,
+          "matches": []
+        },
+        {
+          "id": "mara-burns-note",
+          "weight": 2.0,
+          "semantic": false,
+          "provenance": false,
+          "expected_p": 6,
+          "matches": []
+        },
+        {
+          "id": "mara-keeps-receipt",
+          "weight": 2.0,
+          "semantic": false,
+          "provenance": false,
+          "expected_p": 6,
+          "matches": []
+        }
+      ],
+      "forbidden": [
+        {
+          "id": "false-new-knowledge-levin-stair-sealed",
+          "passed": true,
+          "matches": []
+        },
+        {
+          "id": "wrong-subject-mara-embarrassed",
+          "passed": true,
+          "matches": []
+        },
+        {
+          "id": "hedged-sava-intent-promoted-to-fact",
+          "passed": true,
+          "matches": []
+        },
+        {
+          "id": "wrong-speaker-only-invoice",
+          "passed": true,
+          "matches": []
+        },
+        {
+          "id": "unsupported-mara-wary-state",
+          "passed": true,
+          "matches": []
+        },
+        {
+          "id": "unsupported-mara-observant-state",
+          "passed": true,
+          "matches": []
+        },
+        {
+          "id": "unsupported-mara-sava-trust-loss",
+          "passed": true,
+          "matches": []
+        },
+        {
+          "id": "document-text-promoted-to-say",
+          "passed": true,
+          "matches": []
+        },
+        {
+          "id": "copied-example-key-upstairs",
+          "passed": true,
+          "matches": []
+        },
+        {
+          "id": "wrong-subject-mara-tests-handle",
+          "passed": true,
+          "matches": []
+        },
+        {
+          "id": "unsupported-mara-levin-trust-loss",
+          "passed": true,
+          "matches": []
+        },
+        {
+          "id": "unsupported-sava-mara-lie-revealed",
+          "passed": true,
+          "matches": []
+        },
+        {
+          "id": "wrong-direction-mara-hands-envelope",
+          "passed": true,
+          "matches": []
+        },
+        {
+          "id": "wrong-subject-mara-asks-courier-news",
+          "passed": true,
+          "matches": []
+        }
+      ],
+      "end": {
+        "value": {
+          "present": "Mara",
+          "loc": "workshop",
+          "situation": "Mara opened the envelope and burned the note"
+        },
+        "checks": {
+          "present": true,
+          "situation": false,
+          "loc_not_object": false
+        }
+      },
+      "paragraph_coverage": [
+        {
+          "p": 2,
+          "tokens": 47,
+          "observations": 2,
+          "event_count": 1,
+          "tags": [
+            "EV",
+            "SAY"
+          ]
+        },
+        {
+          "p": 3,
+          "tokens": 44,
+          "observations": 4,
+          "event_count": 3,
+          "tags": [
+            "DET",
+            "EV",
+            "EV",
+            "EV"
+          ]
+        },
+        {
+          "p": 5,
+          "tokens": 47,
+          "observations": 6,
+          "event_count": 3,
+          "tags": [
+            "SAY",
+            "SAY",
+            "Q",
+            "EV",
+            "EV",
+            "EV"
+          ]
+        },
+        {
+          "p": 6,
+          "tokens": 48,
+          "observations": 4,
+          "event_count": 4,
+          "tags": [
+            "EV",
+            "EV",
+            "EV",
+            "EV"
+          ]
+        }
+      ]
+    },
+    {
+      "case": "coreference-handoff",
+      "fixture": "Synthetic coreference handoff story",
+      "focus": [
+        "pronoun-coreference",
+        "role-direction",
+        "multi-action",
+        "end-location"
+      ],
+      "gold": "samples/benchmarks/coreference_gold.json",
+      "story": "samples/benchmarks/coreference_story.txt",
+      "book_id": 23,
+      "profile": "FAST",
+      "contract_pass": true,
+      "elapsed": 5.766849360999913,
+      "attempts": [
+        {
+          "profile": "FAST",
+          "contract_pass": true,
+          "stats": {
+            "parsed": 22,
+            "ignored": 0,
+            "quarantined": 1,
+            "no_span": 0,
+            "span_needed": 19,
+            "span_valid": 19,
+            "span_validity": 1.0,
+            "junk_ratio": 0.0,
+            "content_count": 17,
+            "repaired_prefix": 0,
+            "disallowed": 0,
+            "shape_invalid": 1,
+            "end_tail_miss": 0
+          }
+        }
+      ],
+      "scores": {
+        "semantic_coverage": 1.0,
+        "grounded_coverage": 1.0,
+        "forbidden_pass": 1.0,
+        "end_pass": 0.75,
+        "overall": 0.9749999999999999
+      },
+      "required": [
+        {
+          "id": "nadia-places-key",
+          "weight": 1.0,
+          "semantic": true,
+          "provenance": true,
+          "expected_p": 2,
+          "matches": [
+            {
+              "id": 202,
+              "tag": "EV",
+              "payload": "Nadia placed a silver key on a table",
+              "epistemic": "EXPLICIT",
+              "p": [
+                2
+              ]
+            }
+          ]
+        },
+        {
+          "id": "nadia-key-claim",
+          "weight": 1.0,
+          "semantic": true,
+          "provenance": true,
+          "expected_p": 2,
+          "matches": [
+            {
+              "id": 203,
+              "tag": "SAY",
+              "payload": "Nadia | “This opens the archive room, not the cellar”",
+              "epistemic": "EXPLICIT",
+              "p": [
+                2
+              ]
+            }
+          ]
+        },
+        {
+          "id": "olek-picks-key",
+          "weight": 2.0,
+          "semantic": true,
+          "provenance": true,
+          "expected_p": 3,
+          "matches": [
+            {
+              "id": 207,
+              "tag": "EV",
+              "payload": "Olek picked up the silver key",
+              "epistemic": "EXPLICIT",
+              "p": [
+                3
+              ]
+            }
+          ]
+        },
+        {
+          "id": "olek-wraps-key",
+          "weight": 1.0,
+          "semantic": true,
+          "provenance": true,
+          "expected_p": 3,
+          "matches": [
+            {
+              "id": 208,
+              "tag": "EV",
+              "payload": "Olek wrapped the silver key in a blue handkerchief",
+              "epistemic": "EXPLICIT",
+              "p": [
+                3
+              ]
+            }
+          ]
+        },
+        {
+          "id": "olek-pockets-key",
+          "weight": 1.0,
+          "semantic": true,
+          "provenance": true,
+          "expected_p": 3,
+          "matches": [
+            {
+              "id": 209,
+              "tag": "EV",
+              "payload": "Olek put the silver key in his left coat pocket",
+              "epistemic": "EXPLICIT",
+              "p": [
+                3
+              ]
+            }
+          ]
+        },
+        {
+          "id": "olek-locks-drawer",
+          "weight": 1.0,
+          "semantic": true,
+          "provenance": true,
+          "expected_p": 3,
+          "matches": [
+            {
+              "id": 210,
+              "tag": "EV",
+              "payload": "Olek locked the table drawer",
+              "epistemic": "EXPLICIT",
+              "p": [
+                3
+              ]
+            }
+          ]
+        },
+        {
+          "id": "olek-hands-petro-key",
+          "weight": 2.0,
+          "semantic": true,
+          "provenance": true,
+          "expected_p": 4,
+          "matches": [
+            {
+              "id": 213,
+              "tag": "EV",
+              "payload": "Olek handed Petro the silver key",
+              "epistemic": "EXPLICIT",
+              "p": [
+                4
+              ]
+            }
+          ]
+        },
+        {
+          "id": "olek-give-only-nadia",
+          "weight": 1.0,
+          "semantic": true,
+          "provenance": true,
+          "expected_p": 4,
+          "matches": [
+            {
+              "id": 214,
+              "tag": "SAY",
+              "payload": "Olek | “Give this only to Nadia”",
+              "epistemic": "EXPLICIT",
+              "p": [
+                4
+              ]
+            }
+          ]
+        },
+        {
+          "id": "petro-hides-key",
+          "weight": 2.0,
+          "semantic": true,
+          "provenance": true,
+          "expected_p": 4,
+          "matches": [
+            {
+              "id": 217,
+              "tag": "EV",
+              "payload": "Petro hid the silver key inside his boot",
+              "epistemic": "EXPLICIT",
+              "p": [
+                4
+              ]
+            }
+          ]
+        }
+      ],
+      "forbidden": [
+        {
+          "id": "wrong-direction-petro-hands-olek",
+          "passed": true,
+          "matches": []
+        },
+        {
+          "id": "wrong-actor-nadia-picks-key",
+          "passed": true,
+          "matches": []
+        },
+        {
+          "id": "wrong-speaker-petro-give-nadia",
+          "passed": true,
+          "matches": []
+        }
+      ],
+      "end": {
+        "value": {
+          "present": "Olek, Petro, Nadia",
+          "loc": "courtyard gate",
+          "situation": "Olek walks away"
+        },
+        "checks": {
+          "present": true,
+          "situation": false,
+          "loc_not_object": true,
+          "loc": true
+        }
+      },
+      "paragraph_coverage": [
+        {
+          "p": 2,
+          "tokens": 39,
+          "observations": 5,
+          "event_count": 1,
+          "tags": [
+            "EV",
+            "SAY",
+            "ST",
+            "REL",
+            "DET"
+          ]
+        },
+        {
+          "p": 3,
+          "tokens": 39,
+          "observations": 6,
+          "event_count": 6,
+          "tags": [
+            "EV",
+            "EV",
+            "EV",
+            "EV",
+            "EV",
+            "EV"
+          ]
+        },
+        {
+          "p": 4,
+          "tokens": 48,
+          "observations": 6,
+          "event_count": 3,
+          "tags": [
+            "EV",
+            "SAY",
+            "ST",
+            "EV",
+            "EV",
+            "ST"
+          ]
+        }
+      ]
+    },
+    {
+      "case": "document-vs-speech",
+      "fixture": "Synthetic document versus speech story",
+      "focus": [
+        "document-vs-speech",
+        "speaker-attribution",
+        "action-coverage",
+        "end-location"
+      ],
+      "gold": "samples/benchmarks/document_gold.json",
+      "story": "samples/benchmarks/document_story.txt",
+      "book_id": 24,
+      "profile": "FAST+COVERAGE",
+      "contract_pass": true,
+      "elapsed": 4.736154651003744,
+      "attempts": [
+        {
+          "profile": "FAST",
+          "contract_pass": true,
+          "stats": {
+            "parsed": 10,
+            "ignored": 0,
+            "quarantined": 1,
+            "no_span": 0,
+            "span_needed": 6,
+            "span_valid": 6,
+            "span_validity": 1.0,
+            "junk_ratio": 0.0,
+            "content_count": 5,
+            "repaired_prefix": 0,
+            "disallowed": 0,
+            "shape_invalid": 1,
+            "end_tail_miss": 0
+          }
+        },
+        {
+          "profile": "ACTION-COVERAGE",
+          "contract_pass": true,
+          "stats": {
+            "parsed": 7,
+            "ignored": 0,
+            "quarantined": 0,
+            "no_span": 0,
+            "span_needed": 7,
+            "span_valid": 7,
+            "span_validity": 1.0,
+            "junk_ratio": 0.0,
+            "content_count": 7,
+            "repaired_prefix": 0,
+            "disallowed": 0,
+            "shape_invalid": 0,
+            "end_tail_miss": 0
+          },
+          "targets": [
+            3,
+            4
+          ]
+        }
+      ],
+      "scores": {
+        "semantic_coverage": 0.5833333333333334,
+        "grounded_coverage": 0.5833333333333334,
+        "forbidden_pass": 1.0,
+        "end_pass": 1.0,
+        "overall": 0.7083333333333334
+      },
+      "required": [
+        {
+          "id": "jonas-gives-clipboard",
+          "weight": 1.0,
+          "semantic": false,
+          "provenance": false,
+          "expected_p": 2,
+          "matches": []
+        },
+        {
+          "id": "generator-report-content",
+          "weight": 2.0,
+          "semantic": false,
+          "provenance": false,
+          "expected_p": 2,
+          "matches": []
+        },
+        {
+          "id": "mira-reads-warning",
+          "weight": 2.0,
+          "semantic": true,
+          "provenance": true,
+          "expected_p": 3,
+          "matches": [
+            {
+              "id": 224,
+              "tag": "EV",
+              "payload": "Mira read the warning",
+              "epistemic": "EXPLICIT",
+              "p": [
+                3
+              ]
+            }
+          ]
+        },
+        {
+          "id": "mira-copies-time",
+          "weight": 1.0,
+          "semantic": true,
+          "provenance": true,
+          "expected_p": 3,
+          "matches": [
+            {
+              "id": 225,
+              "tag": "EV",
+              "payload": "Mira copied 02:10 into her notebook",
+              "epistemic": "EXPLICIT",
+              "p": [
+                3
+              ]
+            }
+          ]
+        },
+        {
+          "id": "mira-folds-report",
+          "weight": 1.0,
+          "semantic": true,
+          "provenance": true,
+          "expected_p": 3,
+          "matches": [
+            {
+              "id": 226,
+              "tag": "EV",
+              "payload": "Mira folded the report in half",
+              "epistemic": "EXPLICIT",
+              "p": [
+                3
+              ]
+            }
+          ]
+        },
+        {
+          "id": "mira-wait-mechanic-speech",
+          "weight": 2.0,
+          "semantic": true,
+          "provenance": true,
+          "expected_p": 3,
+          "matches": [
+            {
+              "id": 220,
+              "tag": "SAY",
+              "payload": "Mira | “It says we wait for the mechanic”",
+              "epistemic": "EXPLICIT",
+              "p": [
+                3
+              ]
+            }
+          ]
+        },
+        {
+          "id": "mira-places-report",
+          "weight": 1.0,
+          "semantic": true,
+          "provenance": true,
+          "expected_p": 4,
+          "matches": [
+            {
+              "id": 229,
+              "tag": "EV",
+              "payload": "Mira placed the folded report under the radio",
+              "epistemic": "EXPLICIT",
+              "p": [
+                4
+              ]
+            }
+          ]
+        },
+        {
+          "id": "mira-call-dena-speech",
+          "weight": 2.0,
+          "semantic": false,
+          "provenance": false,
+          "expected_p": 4,
+          "matches": []
+        }
+      ],
+      "forbidden": [
+        {
+          "id": "report-content-promoted-to-say",
+          "passed": true,
+          "matches": []
+        },
+        {
+          "id": "wrong-speaker-wait-mechanic",
+          "passed": true,
+          "matches": []
+        },
+        {
+          "id": "wrong-speaker-call-dena",
+          "passed": true,
+          "matches": []
+        }
+      ],
+      "end": {
+        "value": {
+          "present": "Mira",
+          "loc": "control room",
+          "situation": "Mira places the report under the radio and instructs Jonas to call Dena"
+        },
+        "checks": {
+          "present": true,
+          "situation": true,
+          "loc_not_object": true,
+          "loc": true
+        }
+      },
+      "paragraph_coverage": [
+        {
+          "p": 2,
+          "tokens": 52,
+          "observations": 2,
+          "event_count": 1,
+          "tags": [
+            "EV",
+            "DET"
+          ]
+        },
+        {
+          "p": 3,
+          "tokens": 42,
+          "observations": 7,
+          "event_count": 5,
+          "tags": [
+            "SAY",
+            "ST",
+            "EV",
+            "EV",
+            "EV",
+            "EV",
+            "EV"
+          ]
+        },
+        {
+          "p": 4,
+          "tokens": 37,
+          "observations": 3,
+          "event_count": 2,
+          "tags": [
+            "TH+",
+            "EV",
+            "EV"
+          ]
+        }
+      ]
+    },
+    {
+      "case": "end-location",
+      "fixture": "Synthetic end location story",
+      "focus": [
+        "end-location",
+        "remote-character-destination",
+        "speaker-attribution",
+        "action-coverage"
+      ],
+      "gold": "samples/benchmarks/end_location_gold.json",
+      "story": "samples/benchmarks/end_location_story.txt",
+      "book_id": 25,
+      "profile": "FAST+REPAIR+COVERAGE",
+      "contract_pass": true,
+      "elapsed": 5.766134180994413,
+      "attempts": [
+        {
+          "profile": "FAST",
+          "contract_pass": false,
+          "stats": {
+            "parsed": 12,
+            "ignored": 0,
+            "quarantined": 3,
+            "no_span": 2,
+            "span_needed": 10,
+            "span_valid": 8,
+            "span_validity": 0.8,
+            "junk_ratio": 0.0,
+            "content_count": 8,
+            "repaired_prefix": 0,
+            "disallowed": 0,
+            "shape_invalid": 1,
+            "end_tail_miss": 0
+          }
+        },
+        {
+          "profile": "TARGETED-REPAIR",
+          "contract_pass": true,
+          "stats": {
+            "parsed": 1,
+            "ignored": 0,
+            "quarantined": 0,
+            "no_span": 0,
+            "span_needed": 1,
+            "span_valid": 1,
+            "span_validity": 1.0,
+            "junk_ratio": 0.0,
+            "content_count": 0,
+            "repaired_prefix": 0,
+            "disallowed": 0,
+            "shape_invalid": 0,
+            "end_tail_miss": 0
+          }
+        },
+        {
+          "profile": "FAST+REPAIR",
+          "contract_pass": true,
+          "stats": {
+            "parsed": 13,
+            "ignored": 0,
+            "quarantined": 3,
+            "no_span": 2,
+            "span_needed": 11,
+            "span_valid": 9,
+            "span_validity": 0.8181818181818182,
+            "junk_ratio": 0.0,
+            "content_count": 8,
+            "repaired_prefix": 0,
+            "disallowed": 0,
+            "shape_invalid": 1,
+            "end_tail_miss": 0
+          }
+        },
+        {
+          "profile": "ACTION-COVERAGE",
+          "contract_pass": true,
+          "stats": {
+            "parsed": 6,
+            "ignored": 0,
+            "quarantined": 0,
+            "no_span": 0,
+            "span_needed": 6,
+            "span_valid": 6,
+            "span_validity": 1.0,
+            "junk_ratio": 0.0,
+            "content_count": 6,
+            "repaired_prefix": 0,
+            "disallowed": 0,
+            "shape_invalid": 0,
+            "end_tail_miss": 0
+          },
+          "targets": [
+            2,
+            4
+          ]
+        }
+      ],
+      "scores": {
+        "semantic_coverage": 0.6666666666666666,
+        "grounded_coverage": 0.6666666666666666,
+        "forbidden_pass": 1.0,
+        "end_pass": 1.0,
+        "overall": 0.7666666666666667
+      },
+      "required": [
+        {
+          "id": "bruno-workshop-speech",
+          "weight": 1.0,
+          "semantic": true,
+          "provenance": true,
+          "expected_p": 2,
+          "matches": [
+            {
+              "id": 232,
+              "tag": "SAY",
+              "payload": "Bruno | he needed to repair the pump in the workshop",
+              "epistemic": "EXPLICIT",
+              "p": [
+                2
+              ]
+            }
+          ]
+        },
+        {
+          "id": "ada-stay-ledger-speech",
+          "weight": 1.0,
+          "semantic": true,
+          "provenance": true,
+          "expected_p": 2,
+          "matches": [
+            {
+              "id": 233,
+              "tag": "SAY",
+              "payload": "Ada | she would stay inside and check the household ledger",
+              "epistemic": "EXPLICIT",
+              "p": [
+                2
+              ]
+            }
+          ]
+        },
+        {
+          "id": "bruno-leaves-workshop",
+          "weight": 2.0,
+          "semantic": true,
+          "provenance": true,
+          "expected_p": 3,
+          "matches": [
+            {
+              "id": 231,
+              "tag": "EV",
+              "payload": "Bruno left for the workshop",
+              "epistemic": "EXPLICIT",
+              "p": [
+                3
+              ]
+            }
+          ]
+        },
+        {
+          "id": "ada-opens-cabinet",
+          "weight": 1.0,
+          "semantic": true,
+          "provenance": true,
+          "expected_p": 3,
+          "matches": [
+            {
+              "id": 234,
+              "tag": "EV",
+              "payload": "Ada opened the wall cabinet",
+              "epistemic": "EXPLICIT",
+              "p": [
+                3
+              ]
+            }
+          ]
+        },
+        {
+          "id": "ada-removes-ledger",
+          "weight": 1.0,
+          "semantic": true,
+          "provenance": true,
+          "expected_p": 3,
+          "matches": [
+            {
+              "id": 235,
+              "tag": "EV",
+              "payload": "Ada removed a green ledger",
+              "epistemic": "EXPLICIT",
+              "p": [
+                3
+              ]
+            }
+          ]
+        },
+        {
+          "id": "ada-writes-pump-belt",
+          "weight": 2.0,
+          "semantic": false,
+          "provenance": false,
+          "expected_p": 4,
+          "matches": []
+        },
+        {
+          "id": "ada-returns-ledger",
+          "weight": 1.0,
+          "semantic": false,
+          "provenance": false,
+          "expected_p": 4,
+          "matches": []
+        }
+      ],
+      "forbidden": [
+        {
+          "id": "ada-end-workshop-action",
+          "passed": true,
+          "matches": []
+        },
+        {
+          "id": "wrong-speaker-ada-repair-workshop",
+          "passed": true,
+          "matches": []
+        }
+      ],
+      "end": {
+        "value": {
+          "present": "Ada",
+          "loc": "kitchen",
+          "situation": "Ada answered the phone and wrote “pump belt” in the ledger, returning it to the cabinet"
+        },
+        "checks": {
+          "present": true,
+          "situation": true,
+          "loc_not_object": true,
+          "loc": true
+        }
+      },
+      "paragraph_coverage": [
+        {
+          "p": 2,
+          "tokens": 33,
+          "observations": 4,
+          "event_count": 2,
+          "tags": [
+            "SAY",
+            "SAY",
+            "EV",
+            "EV"
+          ]
+        },
+        {
+          "p": 3,
+          "tokens": 27,
+          "observations": 4,
+          "event_count": 3,
+          "tags": [
+            "EV",
+            "EV",
+            "EV",
+            "DET"
+          ]
+        },
+        {
+          "p": 4,
+          "tokens": 39,
+          "observations": 5,
+          "event_count": 4,
+          "tags": [
+            "ST",
+            "EV",
+            "EV",
+            "EV",
+            "EV"
+          ]
+        }
+      ]
+    },
+    {
+      "case": "hedged-perception",
+      "fixture": "Synthetic hedged perception story",
+      "focus": [
+        "hedged-perception",
+        "state-vs-claim",
+        "action-coverage",
+        "end-location"
+      ],
+      "gold": "samples/benchmarks/hedge_gold.json",
+      "story": "samples/benchmarks/hedge_story.txt",
+      "book_id": 26,
+      "profile": "FAST+COVERAGE",
+      "contract_pass": true,
+      "elapsed": 4.449927335001121,
+      "attempts": [
+        {
+          "profile": "FAST",
+          "contract_pass": true,
+          "stats": {
+            "parsed": 9,
+            "ignored": 0,
+            "quarantined": 3,
+            "no_span": 1,
+            "span_needed": 8,
+            "span_valid": 7,
+            "span_validity": 0.875,
+            "junk_ratio": 0.0,
+            "content_count": 4,
+            "repaired_prefix": 0,
+            "disallowed": 0,
+            "shape_invalid": 2,
+            "end_tail_miss": 0
+          }
+        },
+        {
+          "profile": "ACTION-COVERAGE",
+          "contract_pass": true,
+          "stats": {
+            "parsed": 6,
+            "ignored": 0,
+            "quarantined": 0,
+            "no_span": 0,
+            "span_needed": 6,
+            "span_valid": 6,
+            "span_validity": 1.0,
+            "junk_ratio": 0.0,
+            "content_count": 6,
+            "repaired_prefix": 0,
+            "disallowed": 0,
+            "shape_invalid": 0,
+            "end_tail_miss": 0
+          },
+          "targets": [
+            3,
+            4
+          ]
+        }
+      ],
+      "scores": {
+        "semantic_coverage": 0.7,
+        "grounded_coverage": 0.7,
+        "forbidden_pass": 1.0,
+        "end_pass": 0.75,
+        "overall": 0.7649999999999999
+      },
+      "required": [
+        {
+          "id": "keva-crosses-hall",
+          "weight": 1.0,
+          "semantic": true,
+          "provenance": true,
+          "expected_p": 2,
+          "matches": [
+            {
+              "id": 245,
+              "tag": "EV",
+              "payload": "Keva crossed the station hall with a canvas bag",
+              "epistemic": "EXPLICIT",
+              "p": [
+                2
+              ]
+            }
+          ]
+        },
+        {
+          "id": "keva-checks-handle",
+          "weight": 1.0,
+          "semantic": false,
+          "provenance": false,
+          "expected_p": 2,
+          "matches": []
+        },
+        {
+          "id": "keva-waits",
+          "weight": 1.0,
+          "semantic": false,
+          "provenance": false,
+          "expected_p": 3,
+          "matches": []
+        },
+        {
+          "id": "keva-walks-platform",
+          "weight": 1.0,
+          "semantic": true,
+          "provenance": true,
+          "expected_p": 3,
+          "matches": [
+            {
+              "id": 250,
+              "tag": "EV",
+              "payload": "Keva walked to the platform",
+              "epistemic": "EXPLICIT",
+              "p": [
+                3
+              ]
+            }
+          ]
+        },
+        {
+          "id": "rian-frightened-claim",
+          "weight": 2.0,
+          "semantic": true,
+          "provenance": true,
+          "expected_p": 3,
+          "matches": [
+            {
+              "id": 246,
+              "tag": "SAY",
+              "payload": "Rian | She looked frightened to me",
+              "epistemic": "EXPLICIT",
+              "p": [
+                3
+              ]
+            }
+          ]
+        },
+        {
+          "id": "keva-boards",
+          "weight": 2.0,
+          "semantic": true,
+          "provenance": true,
+          "expected_p": 4,
+          "matches": [
+            {
+              "id": 254,
+              "tag": "EV",
+              "payload": "Keva stayed aboard the rear carriage",
+              "epistemic": "EXPLICIT",
+              "p": [
+                4
+              ]
+            }
+          ]
+        },
+        {
+          "id": "keva-places-bag",
+          "weight": 1.0,
+          "semantic": false,
+          "provenance": false,
+          "expected_p": 4,
+          "matches": []
+        },
+        {
+          "id": "keva-opens-book",
+          "weight": 1.0,
+          "semantic": true,
+          "provenance": true,
+          "expected_p": 4,
+          "matches": [
+            {
+              "id": 252,
+              "tag": "EV",
+              "payload": "Keva opened a paperback",
+              "epistemic": "EXPLICIT",
+              "p": [
+                4
+              ]
+            }
+          ]
+        }
+      ],
+      "forbidden": [
+        {
+          "id": "heard-sound-promoted-to-fact",
+          "passed": true,
+          "matches": []
+        },
+        {
+          "id": "frightened-promoted-to-state",
+          "passed": true,
+          "matches": []
+        },
+        {
+          "id": "rian-knows-keva-frightened",
+          "passed": true,
+          "matches": []
+        }
+      ],
+      "end": {
+        "value": {
+          "present": "Keva, Rian",
+          "loc": "rear carriage",
+          "situation": "Keva boards the train"
+        },
+        "checks": {
+          "present": true,
+          "situation": false,
+          "loc_not_object": true,
+          "loc": true
+        }
+      },
+      "paragraph_coverage": [
+        {
+          "p": 2,
+          "tokens": 34,
+          "observations": 2,
+          "event_count": 1,
+          "tags": [
+            "EV",
+            "DET"
+          ]
+        },
+        {
+          "p": 3,
+          "tokens": 46,
+          "observations": 4,
+          "event_count": 2,
+          "tags": [
+            "SAY",
+            "Q",
+            "EV",
+            "EV"
+          ]
+        },
+        {
+          "p": 4,
+          "tokens": 44,
+          "observations": 4,
+          "event_count": 4,
+          "tags": [
+            "EV",
+            "EV",
+            "EV",
+            "EV"
+          ]
+        }
+      ]
+    }
+  ],
+  "macro": {
+    "semantic_coverage": 0.7042857142857143,
+    "grounded_coverage": 0.7042857142857143,
+    "forbidden_pass": 1.0,
+    "end_pass": 0.7666666666666667,
+    "overall": 0.7696666666666666
+  },
+  "elapsed_total": 27.14671061199988
+}

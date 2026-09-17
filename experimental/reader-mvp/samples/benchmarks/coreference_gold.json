@@ -1,0 +1,183 @@
+{
+  "fixture": "Synthetic coreference handoff story",
+  "story": "benchmarks/coreference_story.txt",
+  "case": "coreference-handoff",
+  "focus": [
+    "pronoun-coreference",
+    "role-direction",
+    "multi-action",
+    "end-location"
+  ],
+  "segment_idx": 1,
+  "notes": "Tests whether pronoun chains preserve named actors and transfer direction.",
+  "required": [
+    {
+      "id": "nadia-places-key",
+      "weight": 1,
+      "tags": [
+        "EV"
+      ],
+      "p": 2,
+      "patterns": [
+        "nadia",
+        "plac",
+        "silver key"
+      ]
+    },
+    {
+      "id": "nadia-key-claim",
+      "weight": 1,
+      "tags": [
+        "SAY"
+      ],
+      "p": 2,
+      "patterns": [
+        "nadia",
+        "archive room",
+        "cellar"
+      ]
+    },
+    {
+      "id": "olek-picks-key",
+      "weight": 2,
+      "tags": [
+        "EV"
+      ],
+      "p": 3,
+      "patterns": [
+        "olek",
+        "pick",
+        "silver key"
+      ]
+    },
+    {
+      "id": "olek-wraps-key",
+      "weight": 1,
+      "tags": [
+        "EV"
+      ],
+      "p": 3,
+      "patterns": [
+        "olek",
+        "wrap",
+        "key"
+      ]
+    },
+    {
+      "id": "olek-pockets-key",
+      "weight": 1,
+      "tags": [
+        "EV"
+      ],
+      "p": 3,
+      "patterns": [
+        "olek",
+        "(put|place)",
+        "pocket"
+      ]
+    },
+    {
+      "id": "olek-locks-drawer",
+      "weight": 1,
+      "tags": [
+        "EV"
+      ],
+      "p": 3,
+      "patterns": [
+        "olek",
+        "lock",
+        "drawer"
+      ]
+    },
+    {
+      "id": "olek-hands-petro-key",
+      "weight": 2,
+      "tags": [
+        "EV"
+      ],
+      "p": 4,
+      "patterns": [
+        "olek",
+        "hand",
+        "petro",
+        "key"
+      ]
+    },
+    {
+      "id": "olek-give-only-nadia",
+      "weight": 1,
+      "tags": [
+        "SAY"
+      ],
+      "p": 4,
+      "patterns": [
+        "olek",
+        "give",
+        "only",
+        "nadia"
+      ]
+    },
+    {
+      "id": "petro-hides-key",
+      "weight": 2,
+      "tags": [
+        "EV"
+      ],
+      "p": 4,
+      "patterns": [
+        "petro",
+        "hid",
+        "key",
+        "boot"
+      ]
+    }
+  ],
+  "forbidden": [
+    {
+      "id": "wrong-direction-petro-hands-olek",
+      "tags": [
+        "EV"
+      ],
+      "patterns": [
+        "^petro\\b.*\\bhand\\w*\\b.*\\bolek\\b.*\\bkey\\b"
+      ]
+    },
+    {
+      "id": "wrong-actor-nadia-picks-key",
+      "tags": [
+        "EV"
+      ],
+      "patterns": [
+        "^nadia\\b.*\\bpick\\w*\\b.*\\bkey\\b"
+      ]
+    },
+    {
+      "id": "wrong-speaker-petro-give-nadia",
+      "tags": [
+        "SAY"
+      ],
+      "patterns": [
+        "petro",
+        "give",
+        "nadia"
+      ]
+    }
+  ],
+  "end": {
+    "present_patterns": [
+      "petro"
+    ],
+    "situation_patterns": [
+      "key",
+      "boot"
+    ],
+    "loc_patterns": [
+      "courtyard gate"
+    ],
+    "forbidden_loc_patterns": [
+      "kitchen",
+      "archive room",
+      "cellar"
+    ]
+  }
+}

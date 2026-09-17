@@ -1,0 +1,111 @@
+{
+  "fixture": "Generalization negative intent story",
+  "story": "benchmarks/negative_intent_story.txt",
+  "case": "gen-negative-intent",
+  "focus": [
+    "negation",
+    "almost-action",
+    "refusal",
+    "speech-vs-action"
+  ],
+  "segment_idx": 1,
+  "notes": "Tests that almost/refused/did-not actions are not promoted to completed events.",
+  "required": [
+    {
+      "id": "arden-lowers-hand",
+      "weight": 1,
+      "tags": [
+        "EV"
+      ],
+      "p": 2,
+      "patterns": [
+        "arden",
+        "lower",
+        "hand"
+      ]
+    },
+    {
+      "id": "nessa-do-not-vent",
+      "weight": 2,
+      "tags": [
+        "SAY"
+      ],
+      "p": 3,
+      "patterns": [
+        "nessa",
+        "do not vent",
+        "chamber"
+      ]
+    },
+    {
+      "id": "arden-closes-cover",
+      "weight": 2,
+      "tags": [
+        "EV"
+      ],
+      "p": 3,
+      "patterns": [
+        "arden",
+        "clos",
+        "inspection cover"
+      ]
+    },
+    {
+      "id": "arden-carries-toolbox",
+      "weight": 1,
+      "tags": [
+        "EV"
+      ],
+      "p": 4,
+      "patterns": [
+        "arden",
+        "carr",
+        "toolbox",
+        "maintenance bench"
+      ]
+    }
+  ],
+  "forbidden": [
+    {
+      "id": "almost-opened-promoted",
+      "tags": [
+        "EV"
+      ],
+      "patterns": [
+        "^arden\\\\b(?!.*\\\\b(?:almost|nearly|did\\\\s+not|didn't|never|refus\\\\w*)\\\\b).*\\\\bopen\\\\w*\\\\b.*\\\\bemergency valve\\\\b"
+      ]
+    },
+    {
+      "id": "refused-pull-promoted",
+      "tags": [
+        "EV"
+      ],
+      "patterns": [
+        "^arden\\\\b(?!.*\\\\b(?:refus\\\\w*|did\\\\s+not|didn't|never|almost|nearly)\\\\b).*\\\\bpull\\\\w*\\\\b.*\\\\blever\\\\b"
+      ]
+    },
+    {
+      "id": "vent-command-promoted-to-action",
+      "tags": [
+        "EV"
+      ],
+      "patterns": [
+        "^arden\\b.*\\bvent\\w*\\b.*\\bchamber\\b"
+      ]
+    }
+  ],
+  "end": {
+    "present_patterns": [
+      "arden"
+    ],
+    "situation_patterns": [
+      "toolbox"
+    ],
+    "loc_patterns": [
+      "maintenance bench"
+    ],
+    "forbidden_loc_patterns": [
+      "chamber"
+    ]
+  }
+}

@@ -1,0 +1,25 @@
+<!doctype html><html lang="uk"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Reader MVP</title><link rel="stylesheet" href="/static/style.css"></head>
+<body>
+<header><div><h1>Reader <span>MVP</span></h1><p>source-grounded local AI reading workspace</p></div><div id="health" class="pill">checking llama…</div></header>
+<main>
+<section class="sidebar">
+  <div class="card"><h2>Додати джерело</h2>
+    <form id="urlForm"><input id="url" placeholder="https://…"><input id="urlTitle" placeholder="Назва (необов'язково)"><button>Додати URL</button></form>
+    <div class="sep">або</div>
+    <form id="fileForm"><input name="file" type="file" accept=".txt,.md,.epub"><input name="title" placeholder="Назва"><input name="author" placeholder="Автор"><button>Імпортувати файл</button></form>
+  </div>
+  <div class="card"><div class="row"><h2>Книги</h2><button class="ghost" onclick="loadBooks()">↻</button></div><div id="books"></div></div>
+</section>
+<section class="workspace">
+  <div id="empty" class="empty"><div class="orb">✦</div><h2>Вибери книгу</h2><p>Потім запускай посегментне читання локальною моделлю.</p></div>
+  <div id="bookView" hidden>
+    <div class="bookHead"><div><h2 id="bookTitle"></h2><p id="bookMeta"></p></div><button id="nextBtn">Analyze next segment</button></div>
+    <div class="metrics" id="metrics"></div>
+    <div class="grid">
+      <div class="card tall"><div class="row"><h3>Observation ledger</h3><span class="hint">append-only</span></div><div id="obs" class="ledger"></div></div>
+      <div class="card tall"><h3>Chat with source</h3><div id="chat" class="chat"></div><form id="askForm" class="ask"><textarea id="question" placeholder="Чому персонаж зробив…?"></textarea><button>Ask</button></form></div>
+    </div>
+    <details class="card"><summary>Останній raw output моделі</summary><pre id="raw"></pre></details>
+  </div>
+</section>
+</main><script src="/static/app.js"></script></body></html>

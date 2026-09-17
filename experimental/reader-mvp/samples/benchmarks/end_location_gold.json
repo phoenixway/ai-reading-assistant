@@ -1,0 +1,147 @@
+{
+  "fixture": "Synthetic end location story",
+  "story": "benchmarks/end_location_story.txt",
+  "case": "end-location",
+  "focus": [
+    "end-location",
+    "remote-character-destination",
+    "speaker-attribution",
+    "action-coverage"
+  ],
+  "segment_idx": 1,
+  "notes": "Bruno goes to the workshop; Ada remains in the kitchen through the final line.",
+  "required": [
+    {
+      "id": "bruno-workshop-speech",
+      "weight": 1,
+      "tags": [
+        "SAY"
+      ],
+      "p": 2,
+      "patterns": [
+        "bruno",
+        "repair",
+        "pump",
+        "workshop"
+      ]
+    },
+    {
+      "id": "ada-stay-ledger-speech",
+      "weight": 1,
+      "tags": [
+        "SAY"
+      ],
+      "p": 2,
+      "patterns": [
+        "ada",
+        "stay",
+        "ledger"
+      ]
+    },
+    {
+      "id": "bruno-leaves-workshop",
+      "weight": 2,
+      "tags": [
+        "EV"
+      ],
+      "p": 3,
+      "patterns": [
+        "bruno",
+        "left|leave",
+        "workshop"
+      ]
+    },
+    {
+      "id": "ada-opens-cabinet",
+      "weight": 1,
+      "tags": [
+        "EV"
+      ],
+      "p": 3,
+      "patterns": [
+        "ada",
+        "open",
+        "cabinet"
+      ]
+    },
+    {
+      "id": "ada-removes-ledger",
+      "weight": 1,
+      "tags": [
+        "EV"
+      ],
+      "p": 3,
+      "patterns": [
+        "ada",
+        "remov",
+        "ledger"
+      ]
+    },
+    {
+      "id": "ada-writes-pump-belt",
+      "weight": 2,
+      "tags": [
+        "EV",
+        "DET"
+      ],
+      "p": 4,
+      "patterns": [
+        "ada",
+        "pump belt",
+        "ledger"
+      ]
+    },
+    {
+      "id": "ada-returns-ledger",
+      "weight": 1,
+      "tags": [
+        "EV"
+      ],
+      "p": 4,
+      "patterns": [
+        "ada",
+        "return",
+        "ledger",
+        "cabinet"
+      ]
+    }
+  ],
+  "forbidden": [
+    {
+      "id": "ada-end-workshop-action",
+      "tags": [
+        "EV"
+      ],
+      "patterns": [
+        "^ada\\b.*\\b(?:go|went|leave|left|arriv|enter)\\w*\\b.*\\bworkshop\\b"
+      ]
+    },
+    {
+      "id": "wrong-speaker-ada-repair-workshop",
+      "tags": [
+        "SAY"
+      ],
+      "patterns": [
+        "ada",
+        "repair",
+        "pump",
+        "workshop"
+      ]
+    }
+  ],
+  "end": {
+    "present_patterns": [
+      "ada"
+    ],
+    "situation_patterns": [
+      "ledger",
+      "cabinet"
+    ],
+    "loc_patterns": [
+      "kitchen"
+    ],
+    "forbidden_loc_patterns": [
+      "workshop"
+    ]
+  }
+}

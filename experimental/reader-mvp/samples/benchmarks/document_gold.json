@@ -1,0 +1,173 @@
+{
+  "fixture": "Synthetic document versus speech story",
+  "story": "benchmarks/document_story.txt",
+  "case": "document-vs-speech",
+  "focus": [
+    "document-vs-speech",
+    "speaker-attribution",
+    "action-coverage",
+    "end-location"
+  ],
+  "segment_idx": 1,
+  "notes": "Written report content must not be promoted to character speech.",
+  "required": [
+    {
+      "id": "jonas-gives-clipboard",
+      "weight": 1,
+      "tags": [
+        "EV"
+      ],
+      "p": 2,
+      "patterns": [
+        "jonas",
+        "(give|gave|hand)",
+        "mira",
+        "clipboard"
+      ]
+    },
+    {
+      "id": "generator-report-content",
+      "weight": 2,
+      "tags": [
+        "DET",
+        "Q"
+      ],
+      "p": 2,
+      "patterns": [
+        "generator 4",
+        "failed",
+        "02:10",
+        "do not restart"
+      ]
+    },
+    {
+      "id": "mira-reads-warning",
+      "weight": 2,
+      "tags": [
+        "EV"
+      ],
+      "p": 3,
+      "patterns": [
+        "mira",
+        "read",
+        "warning"
+      ]
+    },
+    {
+      "id": "mira-copies-time",
+      "weight": 1,
+      "tags": [
+        "EV"
+      ],
+      "p": 3,
+      "patterns": [
+        "mira",
+        "cop",
+        "02:10",
+        "notebook"
+      ]
+    },
+    {
+      "id": "mira-folds-report",
+      "weight": 1,
+      "tags": [
+        "EV"
+      ],
+      "p": 3,
+      "patterns": [
+        "mira",
+        "fold",
+        "report"
+      ]
+    },
+    {
+      "id": "mira-wait-mechanic-speech",
+      "weight": 2,
+      "tags": [
+        "SAY"
+      ],
+      "p": 3,
+      "patterns": [
+        "mira",
+        "wait",
+        "mechanic"
+      ]
+    },
+    {
+      "id": "mira-places-report",
+      "weight": 1,
+      "tags": [
+        "EV"
+      ],
+      "p": 4,
+      "patterns": [
+        "mira",
+        "plac",
+        "report",
+        "radio"
+      ]
+    },
+    {
+      "id": "mira-call-dena-speech",
+      "weight": 2,
+      "tags": [
+        "SAY"
+      ],
+      "p": 4,
+      "patterns": [
+        "mira",
+        "call dena",
+        "mechanic"
+      ]
+    }
+  ],
+  "forbidden": [
+    {
+      "id": "report-content-promoted-to-say",
+      "tags": [
+        "SAY"
+      ],
+      "patterns": [
+        "generator 4",
+        "failed",
+        "02:10"
+      ]
+    },
+    {
+      "id": "wrong-speaker-wait-mechanic",
+      "tags": [
+        "SAY"
+      ],
+      "patterns": [
+        "jonas",
+        "wait",
+        "mechanic"
+      ]
+    },
+    {
+      "id": "wrong-speaker-call-dena",
+      "tags": [
+        "SAY"
+      ],
+      "patterns": [
+        "jonas",
+        "call dena"
+      ]
+    }
+  ],
+  "end": {
+    "present_patterns": [
+      "mira"
+    ],
+    "situation_patterns": [
+      "report",
+      "radio"
+    ],
+    "loc_patterns": [
+      "control room"
+    ],
+    "forbidden_loc_patterns": [
+      "loading bay"
+    ]
+  }
+}

@@ -1,0 +1,6 @@
+.venv/
+__pycache__/
+.pytest_cache/
+data/*.db*
+samples/irene_iddesleigh.txt
+samples/sherlock_holmes.txt

@@ -1,0 +1,137 @@
+{
+  "fixture": "Generalization interrupted dialogue story",
+  "story": "benchmarks/interrupted_dialogue_story.txt",
+  "case": "gen-interrupted-dialogue",
+  "focus": [
+    "speaker-attribution",
+    "interrupted-dialogue",
+    "speech-vs-action",
+    "end-location"
+  ],
+  "segment_idx": 1,
+  "notes": "Tests before/after quote attribution and interrupted dialogue without speaker swaps. The P03 crate action intentionally does not require resolving source-surface 'He' to Dax because the fixture provides no explicit textual gender/coreference evidence.",
+  "required": [
+    {
+      "id": "lora-furnace-command",
+      "weight": 2,
+      "tags": [
+        "SAY"
+      ],
+      "p": 2,
+      "patterns": [
+        "lora",
+        "put",
+        "furnace"
+      ]
+    },
+    {
+      "id": "dax-east-room-speech",
+      "weight": 1,
+      "tags": [
+        "SAY"
+      ],
+      "p": 3,
+      "patterns": [
+        "dax",
+        "east room"
+      ]
+    },
+    {
+      "id": "lora-not-tonight",
+      "weight": 2,
+      "tags": [
+        "SAY"
+      ],
+      "p": 3,
+      "patterns": [
+        "lora",
+        "not tonight"
+      ]
+    },
+    {
+      "id": "pronoun-subject-sets-crate",
+      "weight": 2,
+      "tags": [
+        "EV"
+      ],
+      "p": 3,
+      "patterns": [
+        "set",
+        "crate",
+        "furnace"
+      ]
+    },
+    {
+      "id": "eren-calls-dax",
+      "weight": 1,
+      "tags": [
+        "SAY"
+      ],
+      "p": 4,
+      "patterns": [
+        "eren",
+        "dax",
+        "come here"
+      ]
+    },
+    {
+      "id": "dax-one-minute",
+      "weight": 1,
+      "tags": [
+        "SAY"
+      ],
+      "p": 4,
+      "patterns": [
+        "dax",
+        "one minute"
+      ]
+    }
+  ],
+  "forbidden": [
+    {
+      "id": "wrong-speaker-east-room",
+      "tags": [
+        "SAY"
+      ],
+      "patterns": [
+        "lora",
+        "east room"
+      ]
+    },
+    {
+      "id": "wrong-speaker-not-tonight",
+      "tags": [
+        "SAY"
+      ],
+      "patterns": [
+        "dax",
+        "not tonight"
+      ]
+    },
+    {
+      "id": "wrong-speaker-one-minute",
+      "tags": [
+        "SAY"
+      ],
+      "patterns": [
+        "eren",
+        "one minute"
+      ]
+    }
+  ],
+  "end": {
+    "present_patterns": [
+      "dax"
+    ],
+    "situation_patterns": [
+      "crate"
+    ],
+    "loc_patterns": [
+      "workshop"
+    ],
+    "forbidden_loc_patterns": [
+      "hallway",
+      "east room"
+    ]
+  }
+}

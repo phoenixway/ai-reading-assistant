@@ -1,0 +1,684 @@
+{
+  "suite_id": "suite-1789577112942012661",
+  "prompt_sha256": "528ce83dfe208d1551b71547e6cef16c3051971570c81331e9efc0bdc83f4ce0",
+  "sampling": {
+    "extraction_temperature": 0.0,
+    "extraction_seed": 424242,
+    "cache_prompt": false
+  },
+  "llama": {
+    "ok": true,
+    "status": 200,
+    "body": "{\"status\":\"ok\"}"
+  },
+  "fixtures": [
+    {
+      "case": "b17-baseline",
+      "fixture": "Synthetic B17 smoke story",
+      "focus": [
+        "role-direction",
+        "document-vs-speech",
+        "tail-action-coverage",
+        "end-location"
+      ],
+      "gold": "samples/smoke_gold.json",
+      "story": "samples/smoke_story.txt",
+      "book_id": 76,
+      "profile": "FAST+REPAIR+COVERAGE",
+      "contract_pass": true,
+      "elapsed": 7.020403571998031,
+      "attempts": [
+        {
+          "profile": "FAST",
+          "contract_pass": false,
+          "stats": {
+            "parsed": 13,
+            "ignored": 0,
+            "quarantined": 5,
+            "no_span": 0,
+            "span_needed": 14,
+            "span_valid": 14,
+            "span_validity": 1.0,
+            "junk_ratio": 0.0,
+            "content_count": 9,
+            "repaired_prefix": 0,
+            "disallowed": 0,
+            "shape_invalid": 5,
+            "end_tail_miss": 0
+          }
+        },
+        {
+          "profile": "TARGETED-REPAIR",
+          "contract_pass": true,
+          "stats": {
+            "parsed": 1,
+            "ignored": 0,
+            "quarantined": 0,
+            "no_span": 0,
+            "span_needed": 1,
+            "span_valid": 1,
+            "span_validity": 1.0,
+            "junk_ratio": 0.0,
+            "content_count": 0,
+            "repaired_prefix": 0,
+            "disallowed": 0,
+            "shape_invalid": 0,
+            "end_tail_miss": 0
+          }
+        },
+        {
+          "profile": "FAST+REPAIR",
+          "contract_pass": true,
+          "stats": {
+            "parsed": 12,
+            "ignored": 0,
+            "quarantined": 5,
+            "no_span": 0,
+            "span_needed": 15,
+            "span_valid": 15,
+            "span_validity": 1.0,
+            "junk_ratio": 0.0,
+            "content_count": 9,
+            "repaired_prefix": 0,
+            "disallowed": 0,
+            "shape_invalid": 5,
+            "end_tail_miss": 0
+          }
+        },
+        {
+          "profile": "ACTION-COVERAGE",
+          "contract_pass": true,
+          "stats": {
+            "parsed": 9,
+            "ignored": 0,
+            "quarantined": 0,
+            "no_span": 0,
+            "span_needed": 9,
+            "span_valid": 9,
+            "span_validity": 1.0,
+            "junk_ratio": 0.0,
+            "content_count": 9,
+            "repaired_prefix": 0,
+            "disallowed": 0,
+            "shape_invalid": 0,
+            "end_tail_miss": 0
+          },
+          "targets": [
+            3,
+            5,
+            6
+          ]
+        }
+      ],
+      "scores": {
+        "semantic_coverage": 0.7142857142857143,
+        "grounded_coverage": 0.7142857142857143,
+        "forbidden_pass": 0.8571428571428571,
+        "end_pass": 0.6666666666666666,
+        "overall": 0.7380952380952381
+      },
+      "required": [
+        {
+          "id": "levin-tests-handle",
+          "weight": 2.0,
+          "semantic": true,
+          "provenance": true,
+          "expected_p": 2,
+          "matches": [
+            {
+              "id": 869,
+              "tag": "EV",
+              "payload": "Levin tested the brass handle",
+              "epistemic": "EXPLICIT",
+              "p": [
+                2
+              ]
+            }
+          ]
+        },
+        {
+          "id": "mara-father-welded-claim",
+          "weight": 2.0,
+          "semantic": true,
+          "provenance": true,
+          "expected_p": 2,
+          "matches": [
+            {
+              "id": 871,
+              "tag": "SAY",
+              "payload": "Mara | “My father welded it shut before he died”",
+              "epistemic": "EXPLICIT",
+              "p": [
+                2
+              ]
+            }
+          ]
+        },
+        {
+          "id": "sava-arrives",
+          "weight": 1.0,
+          "semantic": false,
+          "provenance": false,
+          "expected_p": 3,
+          "matches": []
+        },
+        {
+          "id": "sava-hands-envelope",
+          "weight": 1.0,
+          "semantic": true,
+          "provenance": true,
+          "expected_p": 3,
+          "matches": [
+            {
+              "id": 878,
+              "tag": "EV",
+              "payload": "Sava handed Mara an envelope",
+              "epistemic": "EXPLICIT",
+              "p": [
+                3
+              ]
+            }
+          ]
+        },
+        {
+          "id": "envelope-b17-blue-pencil",
+          "weight": 2.0,
+          "semantic": true,
+          "provenance": true,
+          "expected_p": 3,
+          "matches": [
+            {
+              "id": 875,
+              "tag": "DET",
+              "payload": "envelope | B17 in blue pencil",
+              "epistemic": "EXPLICIT",
+              "p": [
+                3
+              ]
+            }
+          ]
+        },
+        {
+          "id": "mara-only-invoice-claim",
+          "weight": 2.0,
+          "semantic": true,
+          "provenance": true,
+          "expected_p": 5,
+          "matches": [
+            {
+              "id": 872,
+              "tag": "SAY",
+              "payload": "Mara | “Only an invoice”",
+              "epistemic": "EXPLICIT",
+              "p": [
+                5
+              ]
+            }
+          ]
+        },
+        {
+          "id": "mara-opens-envelope",
+          "weight": 2.0,
+          "semantic": true,
+          "provenance": true,
+          "expected_p": 6,
+          "matches": [
+            {
+              "id": 883,
+              "tag": "EV",
+              "payload": "Mara opened the envelope",
+              "epistemic": "EXPLICIT",
+              "p": [
+                6
+              ]
+            }
+          ]
+        },
+        {
+          "id": "railway-receipt",
+          "weight": 2.0,
+          "semantic": true,
+          "provenance": true,
+          "expected_p": 6,
+          "matches": [
+            {
+              "id": 876,
+              "tag": "DET",
+              "payload": "receipt | railway receipt",
+              "epistemic": "EXPLICIT",
+              "p": [
+                6
+              ]
+            }
+          ]
+        },
+        {
+          "id": "note-message",
+          "weight": 2.0,
+          "semantic": false,
+          "provenance": false,
+          "expected_p": 6,
+          "matches": []
+        },
+        {
+          "id": "mara-reads-note",
+          "weight": 1.0,
+          "semantic": false,
+          "provenance": false,
+          "expected_p": 6,
+          "matches": []
+        },
+        {
+          "id": "mara-burns-note",
+          "weight": 2.0,
+          "semantic": true,
+          "provenance": true,
+          "expected_p": 6,
+          "matches": [
+            {
+              "id": 885,
+              "tag": "EV",
+              "payload": "Mara burned the note",
+              "epistemic": "EXPLICIT",
+              "p": [
+                6
+              ]
+            }
+          ]
+        },
+        {
+          "id": "mara-keeps-receipt",
+          "weight": 2.0,
+          "semantic": false,
+          "provenance": false,
+          "expected_p": 6,
+          "matches": []
+        }
+      ],
+      "forbidden": [
+        {
+          "id": "false-new-knowledge-levin-stair-sealed",
+          "passed": true,
+          "matches": []
+        },
+        {
+          "id": "wrong-subject-mara-embarrassed",
+          "passed": true,
+          "matches": []
+        },
+        {
+          "id": "hedged-sava-intent-promoted-to-fact",
+          "passed": false,
+          "matches": [
+            {
+              "id": 882,
+              "tag": "EV",
+              "payload": "Sava paused as he wanted to correct her",
+              "epistemic": "EXPLICIT",
+              "p": [
+                5
+              ]
+            }
+          ]
+        },
+        {
+          "id": "wrong-speaker-only-invoice",
+          "passed": true,
+          "matches": []
+        },
+        {
+          "id": "unsupported-mara-wary-state",
+          "passed": true,
+          "matches": []
+        },
+        {
+          "id": "unsupported-mara-observant-state",
+          "passed": true,
+          "matches": []
+        },
+        {
+          "id": "unsupported-mara-sava-trust-loss",
+          "passed": true,
+          "matches": []
+        },
+        {
+          "id": "document-text-promoted-to-say",
+          "passed": false,
+          "matches": [
+            {
+              "id": 873,
+              "tag": "SAY",
+              "payload": "Mara | “The eastern stair was opened yesterday. Come alone.”",
+              "epistemic": "EXPLICIT",
+              "p": [
+                6
+              ]
+            }
+          ]
+        },
+        {
+          "id": "copied-example-key-upstairs",
+          "passed": true,
+          "matches": []
+        },
+        {
+          "id": "wrong-subject-mara-tests-handle",
+          "passed": true,
+          "matches": []
+        },
+        {
+          "id": "unsupported-mara-levin-trust-loss",
+          "passed": true,
+          "matches": []
+        },
+        {
+          "id": "unsupported-sava-mara-lie-revealed",
+          "passed": true,
+          "matches": []
+        },
+        {
+          "id": "wrong-direction-mara-hands-envelope",
+          "passed": true,
+          "matches": []
+        },
+        {
+          "id": "wrong-subject-mara-asks-courier-news",
+          "passed": true,
+          "matches": []
+        }
+      ],
+      "end": {
+        "value": {
+          "present": "Mara",
+          "loc": "workshop",
+          "situation": "Mara opens the envelope and burns the note, keeping the receipt"
+        },
+        "checks": {
+          "present": true,
+          "situation": true,
+          "loc_not_object": false
+        }
+      },
+      "paragraph_coverage": [
+        {
+          "p": 2,
+          "tokens": 47,
+          "observations": 2,
+          "event_count": 1,
+          "tags": [
+            "EV",
+            "SAY"
+          ]
+        },
+        {
+          "p": 3,
+          "tokens": 44,
+          "observations": 4,
+          "event_count": 2,
+          "tags": [
+            "DET",
+            "DET",
+            "EV",
+            "EV"
+          ]
+        },
+        {
+          "p": 5,
+          "tokens": 47,
+          "observations": 5,
+          "event_count": 3,
+          "tags": [
+            "SAY",
+            "SAY",
+            "EV",
+            "EV",
+            "EV"
+          ]
+        },
+        {
+          "p": 6,
+          "tokens": 48,
+          "observations": 7,
+          "event_count": 4,
+          "tags": [
+            "SAY",
+            "DET",
+            "Q",
+            "EV",
+            "EV",
+            "EV",
+            "EV"
+          ]
+        }
+      ],
+      "raw_output": "--- FAST (salvage candidate) ---\nSUM: Mara told Levin the eastern stair was sealed twice. Levin tested the handle and apologized. Sava arrived with an envelope marked B17 and a note about the stair being opened. Mara opened the envelope, burned the note, and kept the receipt. @P03-06\nWHO: Mara, Levin, Sava\nLOC: eastern stair, workshop, stove\nTIME: third evening, midnight, after midnight, breakfast\nEV: Levin tested the brass handle @P02\nSAY: Levin | whether the courier had brought news @P05\nSAY: Mara | “My father welded it shut before he died” @P02\nSAY: Mara | “Only an invoice” @P05\nSAY: Mara | “The eastern stair was opened yesterday. Come alone.” @P06\nST: Levin | embarrassed @P02\nST: Mara | kept her eyes on the stove @P05\nKN: Sava | courier named Sava @P03\nREL: Levin -> Mara | embarrassment @P02\nDET: envelope | narrow grey @P03\nDET: envelope | B17 in blue pencil @P03\nDET: receipt | railway receipt @P06\nQ: Mara | (reading the note twice) @P06\nEND: present=Mara, loc=workshop, situation=Mara opens the envelope and burns the note @P06\n\n--- TARGETED-REPAIR ---\nEND: present=Mara | loc=workshop | situation=Mara opens the envelope and burns the note, keeping the receipt @P06\n\n--- ACTION-COVERAGE ---\nEV: Sava handed Mara an envelope @P03\nEV: Mara slipped the envelope into her coat @P03\nEV: Levin asked whether Sava brought news @P05\nEV: Mara kept her eyes on the stove @P05\nEV: Sava paused as he wanted to correct her @P05\nEV: Mara opened the envelope @P06\nEV: She read the note twice @P06\nEV: Mara burned the note @P06\nEV: She kept the receipt @P06"
+    },
+    {
+      "case": "end-location",
+      "fixture": "Synthetic end location story",
+      "focus": [
+        "end-location",
+        "remote-character-destination",
+        "speaker-attribution",
+        "action-coverage"
+      ],
+      "gold": "samples/benchmarks/end_location_gold.json",
+      "story": "samples/benchmarks/end_location_story.txt",
+      "book_id": 77,
+      "profile": "FAST",
+      "contract_pass": true,
+      "elapsed": 4.544752859001164,
+      "attempts": [
+        {
+          "profile": "FAST",
+          "contract_pass": true,
+          "stats": {
+            "parsed": 23,
+            "ignored": 0,
+            "quarantined": 1,
+            "no_span": 1,
+            "span_needed": 17,
+            "span_valid": 16,
+            "span_validity": 0.9411764705882353,
+            "junk_ratio": 0.0,
+            "content_count": 15,
+            "repaired_prefix": 0,
+            "disallowed": 0,
+            "shape_invalid": 0,
+            "end_tail_miss": 0
+          }
+        }
+      ],
+      "scores": {
+        "semantic_coverage": 0.6666666666666666,
+        "grounded_coverage": 0.6666666666666666,
+        "forbidden_pass": 1.0,
+        "end_pass": 0.75,
+        "overall": 0.7416666666666667
+      },
+      "required": [
+        {
+          "id": "bruno-workshop-speech",
+          "weight": 1.0,
+          "semantic": true,
+          "provenance": true,
+          "expected_p": 2,
+          "matches": [
+            {
+              "id": 888,
+              "tag": "SAY",
+              "payload": "Bruno | he needed to repair the pump in the workshop",
+              "epistemic": "EXPLICIT",
+              "p": [
+                2
+              ]
+            }
+          ]
+        },
+        {
+          "id": "ada-stay-ledger-speech",
+          "weight": 1.0,
+          "semantic": false,
+          "provenance": false,
+          "expected_p": 2,
+          "matches": []
+        },
+        {
+          "id": "bruno-leaves-workshop",
+          "weight": 2.0,
+          "semantic": false,
+          "provenance": false,
+          "expected_p": 3,
+          "matches": []
+        },
+        {
+          "id": "ada-opens-cabinet",
+          "weight": 1.0,
+          "semantic": true,
+          "provenance": true,
+          "expected_p": 3,
+          "matches": [
+            {
+              "id": 890,
+              "tag": "EV",
+              "payload": "Ada remained in the kitchen, opened the wall cabinet",
+              "epistemic": "EXPLICIT",
+              "p": [
+                3
+              ]
+            }
+          ]
+        },
+        {
+          "id": "ada-removes-ledger",
+          "weight": 1.0,
+          "semantic": true,
+          "provenance": true,
+          "expected_p": 3,
+          "matches": [
+            {
+              "id": 892,
+              "tag": "EV",
+              "payload": "Ada removed a green ledger",
+              "epistemic": "EXPLICIT",
+              "p": [
+                3
+              ]
+            }
+          ]
+        },
+        {
+          "id": "ada-writes-pump-belt",
+          "weight": 2.0,
+          "semantic": true,
+          "provenance": true,
+          "expected_p": 4,
+          "matches": [
+            {
+              "id": 897,
+              "tag": "EV",
+              "payload": "Ada wrote “pump belt” in the ledger",
+              "epistemic": "EXPLICIT",
+              "p": [
+                4
+              ]
+            }
+          ]
+        },
+        {
+          "id": "ada-returns-ledger",
+          "weight": 1.0,
+          "semantic": true,
+          "provenance": true,
+          "expected_p": 4,
+          "matches": [
+            {
+              "id": 899,
+              "tag": "EV",
+              "payload": "Ada returned the ledger to the cabinet",
+              "epistemic": "EXPLICIT",
+              "p": [
+                4
+              ]
+            }
+          ]
+        }
+      ],
+      "forbidden": [
+        {
+          "id": "ada-end-workshop-action",
+          "passed": true,
+          "matches": []
+        },
+        {
+          "id": "wrong-speaker-ada-repair-workshop",
+          "passed": true,
+          "matches": []
+        }
+      ],
+      "end": {
+        "value": {
+          "present": "Ada, Bruno",
+          "loc": "kitchen",
+          "situation": "Ada answered the phone and recorded the pump belt in the ledger"
+        },
+        "checks": {
+          "present": true,
+          "situation": false,
+          "loc_not_object": true,
+          "loc": true
+        }
+      },
+      "paragraph_coverage": [
+        {
+          "p": 2,
+          "tokens": 33,
+          "observations": 3,
+          "event_count": 1,
+          "tags": [
+            "EV",
+            "SAY",
+            "ST"
+          ]
+        },
+        {
+          "p": 3,
+          "tokens": 27,
+          "observations": 3,
+          "event_count": 2,
+          "tags": [
+            "EV",
+            "DET",
+            "EV"
+          ]
+        },
+        {
+          "p": 4,
+          "tokens": 39,
+          "observations": 9,
+          "event_count": 5,
+          "tags": [
+            "EV",
+            "EV",
+            "SAY",
+            "DET",
+            "EV",
+            "ST",
+            "EV",
+            "DET",
+            "EV"
+          ]
+        }
+      ],
+      "raw_output": "SUM: Ada and Bruno ate breakfast in the kitchen. Bruno needed to repair the pump in the workshop, and Ada would check the household ledger. @P02\nWHO: Ada, Bruno\nLOC: kitchen\nTIME: breakfast\nEV: Bruno said he needed to repair the pump in the workshop @P02\nSAY: Bruno | he needed to repair the pump in the workshop @P02\nST: Ada | intention | check the household ledger @P02\nEV: Ada remained in the kitchen, opened the wall cabinet @P03\nDET: green ledger @P03\nEV: Ada removed a green ledger @P03\nLOC: wall cabinet\nTIME: later\nEV: Bruno called from the workshop phone @P04\nREL: Bruno -> Ada | need | repair\nEV: Ada answered from the kitchen @P04\nSAY: Ada | answered from the kitchen @P04\nDET: pump belt @P04\nEV: Ada wrote “pump belt” in the ledger @P04\nST: Ada | state | wrote “pump belt” in the ledger @P04\nEV: Ada returned the ledger to the cabinet @P04\nDET: green ledger @P04\nLOC: wall cabinet\nEV: Ada stayed in the kitchen @P04\nEND: present=Ada, Bruno | loc=kitchen | situation=Ada answered the phone and recorded the pump belt in the ledger @P04"
+    }
+  ],
+  "macro": {
+    "semantic_coverage": 0.6904761904761905,
+    "grounded_coverage": 0.6904761904761905,
+    "forbidden_pass": 0.9285714285714286,
+    "end_pass": 0.7083333333333333,
+    "overall": 0.7398809523809524
+  },
+  "elapsed_total": 11.565156430999195
+}

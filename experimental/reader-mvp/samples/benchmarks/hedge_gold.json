@@ -1,0 +1,173 @@
+{
+  "fixture": "Synthetic hedged perception story",
+  "story": "benchmarks/hedge_story.txt",
+  "case": "hedged-perception",
+  "focus": [
+    "hedged-perception",
+    "state-vs-claim",
+    "action-coverage",
+    "end-location"
+  ],
+  "segment_idx": 1,
+  "notes": "The text does not establish that Keva actually heard anything or was frightened.",
+  "required": [
+    {
+      "id": "keva-crosses-hall",
+      "weight": 1,
+      "tags": [
+        "EV"
+      ],
+      "p": 2,
+      "patterns": [
+        "keva",
+        "cross",
+        "station hall"
+      ]
+    },
+    {
+      "id": "keva-checks-handle",
+      "weight": 1,
+      "tags": [
+        "EV"
+      ],
+      "p": 2,
+      "patterns": [
+        "keva",
+        "check",
+        "handle"
+      ]
+    },
+    {
+      "id": "keva-waits",
+      "weight": 1,
+      "tags": [
+        "EV"
+      ],
+      "p": 3,
+      "patterns": [
+        "keva",
+        "wait"
+      ]
+    },
+    {
+      "id": "keva-walks-platform",
+      "weight": 1,
+      "tags": [
+        "EV"
+      ],
+      "p": 3,
+      "patterns": [
+        "keva",
+        "walk",
+        "platform"
+      ]
+    },
+    {
+      "id": "rian-frightened-claim",
+      "weight": 2,
+      "tags": [
+        "SAY"
+      ],
+      "p": 3,
+      "patterns": [
+        "rian",
+        "look",
+        "frighten"
+      ]
+    },
+    {
+      "id": "keva-boards",
+      "weight": 2,
+      "tags": [
+        "EV"
+      ],
+      "p": 4,
+      "patterns": [
+        "keva",
+        "board",
+        "rear carriage"
+      ]
+    },
+    {
+      "id": "keva-places-bag",
+      "weight": 1,
+      "tags": [
+        "EV"
+      ],
+      "p": 4,
+      "patterns": [
+        "keva",
+        "plac",
+        "canvas bag",
+        "seat"
+      ]
+    },
+    {
+      "id": "keva-opens-book",
+      "weight": 1,
+      "tags": [
+        "EV"
+      ],
+      "p": 4,
+      "patterns": [
+        "keva",
+        "open",
+        "paperback"
+      ]
+    }
+  ],
+  "forbidden": [
+    {
+      "id": "heard-sound-promoted-to-fact",
+      "tags": [
+        "EV",
+        "KN"
+      ],
+      "epistemic": "EXPLICIT",
+      "patterns": [
+        "keva",
+        "heard",
+        "sound"
+      ]
+    },
+    {
+      "id": "frightened-promoted-to-state",
+      "tags": [
+        "ST"
+      ],
+      "epistemic": "EXPLICIT",
+      "patterns": [
+        "keva",
+        "frighten"
+      ]
+    },
+    {
+      "id": "rian-knows-keva-frightened",
+      "tags": [
+        "KN"
+      ],
+      "epistemic": "EXPLICIT",
+      "patterns": [
+        "rian",
+        "keva",
+        "frighten"
+      ]
+    }
+  ],
+  "end": {
+    "present_patterns": [
+      "keva"
+    ],
+    "situation_patterns": [
+      "rear carriage"
+    ],
+    "loc_patterns": [
+      "rear carriage"
+    ],
+    "forbidden_loc_patterns": [
+      "station hall",
+      "ticket booth",
+      "front doors"
+    ]
+  }
+}

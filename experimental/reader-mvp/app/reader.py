@@ -1,0 +1,7869 @@
+from __future__ import annotations
+import json, re
+from .config import settings
+from .db import tx, connect
+from .llama import LlamaClient
+from .protocol import DEVELOPER_FAST, Parsed, Record, parse_output, merge_parsed, fact_key, entity_id
+from .textutil import norm
+
+
+def _segment_input(con, seg_id: str):
+    rows = con.execute("""
+      SELECT ss.local_no, s.id, s.pos, s.text
+      FROM segment_spans ss JOIN spans s ON s.id=ss.span_id
+      WHERE ss.seg_id=? ORDER BY ss.local_no
+    """, (seg_id,)).fetchall()
+    numbered = '\n\n'.join(f"[P{r['local_no']:02}] {r['text']}" for r in rows)
+    mapping = {r['local_no']: (r['id'], r['pos']) for r in rows}
+    return numbered, mapping
+
+def _end_local_no(con, seg_id: str) -> int | None:
+    rows = con.execute(
+        '''
+        SELECT ss.local_no, s.text
+        FROM segment_spans ss
+        JOIN spans s ON s.id=ss.span_id
+        WHERE ss.seg_id=?
+        ORDER BY ss.local_no DESC
+        ''',
+        (seg_id,),
+    ).fetchall()
+
+    # Scene separators are structural, not narrative END state.
+    separator = re.compile(r'^(?:\*{3,}|-{3,}|_{3,}|#{3,})$')
+
+    for row in rows:
+        text = (row['text'] or '').strip()
+        if text and not separator.fullmatch(text):
+            return int(row['local_no'])
+
+    return int(rows[0]['local_no']) if rows else None
+
+
+def _known(con, book_id: int) -> str:
+    rows = con.execute("SELECT id,canonical FROM entities WHERE book_id=? ORDER BY last_pos DESC LIMIT 40", (book_id,)).fetchall()
+    return ', '.join(f"{r['id']}({r['canonical']})" for r in rows) or '(none yet)'
+
+def _previous_transition(con, book_id: int, idx: int) -> str:
+    r = con.execute("""
+      SELECT t.* FROM transitions t JOIN segments s ON s.id=t.seg_id
+      WHERE s.book_id=? AND s.idx<? ORDER BY s.idx DESC LIMIT 1
+    """, (book_id, idx)).fetchone()
+    if not r:
+        return '(none; this is the beginning)'
+    return f"present={r['present'] or ''} | loc={r['loc'] or ''} | situation={r['situation'] or ''}"
+
+def _recent_summaries(con, book_id: int, idx: int) -> str:
+    rows = con.execute("""
+      SELECT sm.text FROM summaries sm JOIN segments s ON s.id=sm.seg_id
+      WHERE s.book_id=? AND s.idx<? ORDER BY s.idx DESC LIMIT 2
+    """, (book_id, idx)).fetchall()
+    return '\n'.join(reversed([r['text'] for r in rows])) or '(none)'
+
+def _callbacks(con, book_id: int, raw: str) -> str:
+    nr = norm(raw)
+    rows = con.execute("SELECT label,norm,first_span FROM details WHERE book_id=? AND status='dangling' ORDER BY introduced_pos DESC LIMIT 100", (book_id,)).fetchall()
+    hits = []
+    for r in rows:
+        key_terms = [t for t in r['norm'].split() if len(t) >= 4]
+        if key_terms and any(t in nr for t in key_terms):
+            sp = con.execute("SELECT id,text FROM spans WHERE id=?", (r['first_span'],)).fetchone()
+            if sp:
+                hits.append(f"[{sp['id']}] {sp['text']}")
+        if len(hits) >= 3:
+            break
+    return '\n\n'.join(hits) or '(none)'
+
+def build_prompt(con, book_id: int, seg, task_suffix: str = '') -> tuple[list[dict], dict]:
+    raw, mapping = _segment_input(con, seg['id'])
+    end_local_no = _end_local_no(con, seg['id'])
+    end_hint = (
+        f"@P{end_local_no:02}"
+        if end_local_no is not None
+        else "(unknown)"
+    )
+
+    user = f"""KNOWN: {_known(con, book_id)}
+PREVIOUS SCENE END: {_previous_transition(con, book_id, seg['idx'])}
+RECENT: {_recent_summaries(con, book_id, seg['idx'])}
+EARLIER CALLBACKS:\n{_callbacks(con, book_id, raw)}
+
+FINAL SUBSTANTIVE PARAGRAPH: {end_hint}
+END must describe and cite this paragraph.
+
+FRAGMENT:\n{raw}"""
+    if task_suffix:
+        user += '\n\nTASK OVERRIDE: ' + task_suffix
+    return [
+        {"role":"system", "content":DEVELOPER_FAST},
+        {"role":"user", "content":user},
+    ], mapping
+
+def _parse_end(payload: str):
+    fields = {}
+    for p in payload.split('|'):
+        if '=' in p:
+            k,v = p.split('=',1)
+            fields[k.strip()] = v.strip()
+    return fields.get('present',''), fields.get('loc',''), fields.get('situation','')
+
+def _subj_obj(tag: str, payload: str):
+    if tag in {'SAY','ST','KN'}:
+        parts = [x.strip() for x in payload.split('|')]
+        return (entity_id(parts[0]) if parts else None, None)
+    if tag == 'REL':
+        left = payload.split('|',1)[0]
+        if '->' in left:
+            a,b = [entity_id(x.strip()) for x in left.split('->',1)]
+            return a,b
+    return None,None
+
+
+def _compile_terminal_situation(
+    parsed: Parsed,
+    end: Record,
+    incumbent: str,
+    *,
+    max_tail: int = 3,
+) -> str:
+    """
+    Compile END.situation from two already-trusted sources:
+
+    1. the incumbent END situation produced by canonical extraction;
+    2. a short tail of explicit canonical EV records from the final
+       substantive paragraph referenced by END.
+
+    This deliberately performs NO semantic rewriting.
+
+    The EV records have already passed the normal extraction,
+    coverage, provenance, role, speech and actuality precision
+    layers. Keeping their wording intact avoids opening a second
+    hallucination surface at the transition boundary.
+
+    END itself can preserve long-range persistent state that occurred
+    before the final paragraph, while the factual tail preserves
+    terminal details that the END generator tends to summarize away.
+    """
+
+    incumbent = (
+        incumbent
+        or ""
+    ).strip()
+
+    if (
+        max_tail <= 0
+        or not end.spans
+    ):
+        return incumbent
+
+    # Protocol validation guarantees END references the final
+    # substantive paragraph. If a model emitted a span range,
+    # the last referenced local paragraph is the terminal one.
+    final_local_no = max(
+        end.spans
+    )
+
+    candidates = []
+    seen = set()
+
+    for record in parsed.records:
+        if record.tag != "EV":
+            continue
+
+        if (
+            record.epistemic
+            != "EXPLICIT"
+        ):
+            continue
+
+        if (
+            final_local_no
+            not in record.spans
+        ):
+            continue
+
+        payload = (
+            record.payload
+            or ""
+        ).strip()
+
+        if not payload:
+            continue
+
+        key = norm(payload)
+
+        if (
+            not key
+            or key in seen
+        ):
+            continue
+
+        seen.add(key)
+        candidates.append(
+            payload
+        )
+
+    tail = candidates[
+        -max_tail:
+    ]
+
+    parts = []
+    output_seen = set()
+
+    for value in [
+        incumbent,
+        *tail,
+    ]:
+        value = (
+            value
+            or ""
+        ).strip()
+
+        if not value:
+            continue
+
+        key = norm(value)
+
+        if (
+            not key
+            or key in output_seen
+        ):
+            continue
+
+        output_seen.add(key)
+        parts.append(value)
+
+    return "; ".join(parts)
+
+
+def apply_parsed(con, book_id: int, seg, parsed, mapping):
+    local_to_span = {k:v[0] for k,v in mapping.items()}
+    local_to_pos = {k:v[1] for k,v in mapping.items()}
+    summary = next((r.payload for r in parsed.records if r.tag == 'SUM'), '')
+    if summary:
+        con.execute("INSERT OR REPLACE INTO summaries(seg_id,book_id,ref,pos_start,pos_end,text) VALUES(?,?,?,?,?,?)",
+                    (seg['id'], book_id, seg['id'], seg['start_pos'], seg['end_pos'], summary))
+    who = next((r.payload for r in parsed.records if r.tag == 'WHO'), '')
+    for name in [x.strip() for x in who.split(',') if x.strip()]:
+        eid = entity_id(name)
+        con.execute("INSERT OR IGNORE INTO entities(id,book_id,canonical,first_pos,last_pos) VALUES(?,?,?,?,?)", (eid,book_id,name,seg['start_pos'],seg['end_pos']))
+        con.execute("UPDATE entities SET last_pos=? WHERE book_id=? AND id=?", (seg['end_pos'],book_id,eid))
+        con.execute("INSERT OR IGNORE INTO aliases(book_id,norm,entity_id,form) VALUES(?,?,?,?)", (book_id,norm(name),eid,name))
+    for r in parsed.records:
+        if r.tag in {'SUM','WHO','LOC','TIME','END'}:
+            continue
+        spans = [local_to_span[x] for x in r.spans if x in local_to_span]
+        pos = min((local_to_pos[x] for x in r.spans if x in local_to_pos), default=seg['start_pos'])
+        subj,obj = _subj_obj(r.tag, r.payload)
+        source = f"CHAR:{subj}" if r.tag == 'SAY' and subj else 'NAR'
+        cur = con.execute("""INSERT INTO observations(book_id,seg_id,pos,tag,kind,subj,obj,payload,source,epistemic,fact_key,spans,raw_line)
+                           VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                          (book_id,seg['id'],pos,r.tag,r.tag.lower(),subj,obj,r.payload,source,r.epistemic,fact_key(r.tag,r.payload),','.join(spans),r.raw))
+        oid = cur.lastrowid
+        con.execute("INSERT INTO observations_fts(obs_id,book_id,payload) VALUES(?,?,?)", (oid,book_id,r.payload))
+        if r.tag == 'DET' and spans:
+            label = r.payload.split('|',1)[0].strip()
+            con.execute("INSERT INTO details(book_id,label,norm,first_span,introduced_pos) VALUES(?,?,?,?,?)", (book_id,label,norm(label),spans[0],pos))
+        elif r.tag == 'TH+':
+            con.execute("INSERT INTO threads(book_id,title,opened_pos) VALUES(?,?,?)", (book_id,r.payload,pos))
+        elif r.tag == 'TH-':
+            title = r.payload.split('|',1)[0].strip()
+            th = con.execute("SELECT id FROM threads WHERE book_id=? AND status='open' AND title LIKE ? ORDER BY opened_pos DESC LIMIT 1", (book_id, f"%{title}%")).fetchone()
+            if th:
+                con.execute("UPDATE threads SET status='closed',closed_pos=? WHERE id=?", (pos,th['id']))
+    end = next((r for r in parsed.records if r.tag == 'END'), None)
+    if end:
+        present, loc, situation = _parse_end(end.payload)
+
+        situation = _compile_terminal_situation(
+            parsed,
+            end,
+            situation,
+        )
+
+        con.execute(
+            "INSERT OR REPLACE INTO transitions(seg_id,book_id,present,loc,situation) VALUES(?,?,?,?,?)",
+            (
+                seg['id'],
+                book_id,
+                present,
+                loc,
+                situation,
+            ),
+        )
+
+def _extraction_chat(llama, messages):
+    """Deterministic, cache-isolated call for canonical extraction."""
+    return llama.chat(
+        messages,
+        temperature=settings.extraction_temperature,
+        seed=settings.extraction_seed,
+        cache_prompt=False,
+    )
+
+
+ACTION_COVERAGE_SYSTEM = """Extract ONLY explicit narratively useful actions from the supplied fiction paragraphs.
+
+OUTPUT
+EV: <one explicit, self-contained action, <=20 words> @Pxx
+
+RULES
+- Reply only with EV lines. No SUM, WHO, SAY, ST, KN, REL, DET, Q, END, markdown, or commentary.
+- One action per line. A paragraph may require several EV lines.
+- Work exhaustively from left to right, paragraph by paragraph, sentence by sentence, clause by clause.
+- Do not stop after finding one action in a paragraph.
+- Before moving to the next paragraph, ensure every explicit material action in the current paragraph has its own EV.
+- Preserve the exact @Pxx label supplied with the paragraph.
+- Prefer near-extractive wording from the source. Do not creatively paraphrase.
+- Every EV must be understandable as a standalone memory record.
+- Include the explicit actor, verb, and complete object/target whenever the source supplies them.
+- Preserve the most specific explicit noun phrase instead of replacing it with a more generic object.
+- For movement or placement actions, preserve any explicit destination, container, source, direction, or spatial complement.
+- For read/write/copy actions, preserve the explicit item/content being handled and any explicit destination or container.
+- Include an explicit recipient, destination, container, or location when it distinguishes the action.
+- Never reduce `Keva checked the service door handle` to `Keva checked`.
+- Never reduce `Mira copied 02:10 into her notebook` to `Mira copied 02:10`.
+- Never reduce `Mira placed the folded report under the radio` to `Mira placed a report`.
+- Preserve grammatical roles exactly. Never swap actor, recipient, giver, receiver, possessor, or object.
+- If the text says A hands B an object, A must remain the actor and B the receiver.
+- Use the explicit character name instead of a pronoun when the referent is unambiguous in the supplied paragraph.
+- Split coordinated or sequential verbs into separate EV lines. Do not omit one explicit action merely because another action occurs in the same sentence.
+- Extract actions that can matter later: arrive, leave, hand, receive, take, open, close, read, write, copy, place, wait, keep, destroy, hide, follow, help, attack, reveal, etc.
+- Reading a note, letter, receipt, message, or other evidence is an action when the text explicitly says it was read.
+- For an explicit sequence such as open -> read -> burn -> keep, emit each action separately.
+- Do not emit speech acts such as ask, say, tell, reply, or answer as EV. Spoken content belongs to SAY in the main extraction.
+- Do not infer motives, emotions, knowledge, relationships, or truth.
+- For a hedged construction, preserve only the explicit action and omit the hedged intent or interpretation.
+- Written document CONTENT is not an action.
+- Do not emit eye/gaze actions, posture, facial expression, or static mannerisms as EV unless they directly change the narrative situation.
+- If a paragraph contains no explicit useful action, emit nothing for it.
+"""
+
+
+SAY_COVERAGE_SYSTEM = """Extract ONLY speech actually spoken aloud by characters in the supplied fiction paragraphs.
+
+OUTPUT
+SAY: <explicit speaker> | <spoken content> @Pxx
+
+OUTPUT SHAPE
+- Every SAY line must contain EXACTLY ONE `|`.
+- Everything before `|` is ONLY the speaker name.
+- Never put spoken words, a form of address, narration, an action phrase, or a clause in the speaker field.
+- Everything after `|` is ONLY spoken content followed by exactly one @Pxx provenance reference.
+- If you cannot identify a speaker name confidently, omit that SAY line.
+- Do not emit partial lines that omit either the speaker or `|`.
+
+RULES
+- Reply only with SAY lines. No SUM, WHO, LOC, TIME, EV, ST, KN, REL, DET, Q, END, markdown, or commentary.
+- Extract every explicit spoken utterance or spoken question.
+- Preserve the actual speaker exactly. Never swap speaker and listener.
+- Use the explicit character name instead of a pronoun when the speaker is unambiguous.
+- Keep enough of the spoken content to preserve the assertion, request, command, or question.
+- Questions spoken by a character ARE SAY.
+- Narration is NOT SAY.
+- Thoughts, intentions, memories, and inferred beliefs are NOT SAY.
+- Written content in a note, letter, report, receipt, sign, label, message, inscription, or document is NOT SAY merely because it is quoted in the prose.
+- Text silently read from a document is NOT SAY.
+- Only treat document text as SAY if the source explicitly says a character speaks or reads those words aloud.
+- If speaker attribution is ambiguous, omit the SAY rather than guessing.
+- Preserve the exact @Pxx label of the paragraph where the speech occurs.
+"""
+
+
+def _is_structural_paragraph(text: str) -> bool:
+    text = (text or '').strip()
+
+    if not text:
+        return True
+
+    return bool(
+        re.fullmatch(
+            r'(?:chapter\s+\d+|\*{3,}|-{3,}|_{3,}|#{3,})',
+            text,
+            re.I,
+        )
+    )
+
+
+def _select_action_coverage_rows(rows, parsed, min_tokens: int = 24):
+    ev_local_nos = {
+        local_no
+        for record in parsed.records
+        if record.tag == 'EV'
+        for local_no in record.spans
+    }
+
+    targets = []
+
+    for row in rows:
+        local_no = int(row['local_no'])
+        text = (row['text'] or '').strip()
+        tok_len = int(row['tok_len'])
+
+        if _is_structural_paragraph(text):
+            continue
+
+        if tok_len < min_tokens:
+            continue
+
+        if local_no in ev_local_nos:
+            continue
+
+        targets.append({
+            'local_no': local_no,
+            'tok_len': tok_len,
+            'text': text,
+        })
+
+    return targets
+
+
+def _select_action_completeness_rows(
+    rows,
+):
+    """All non-empty substantive paragraphs are action-inventory targets."""
+
+    targets = []
+
+    for row in rows:
+        local_no = int(row['local_no'])
+        text = (row['text'] or '').strip()
+        tok_len = int(row['tok_len'])
+
+        if _is_structural_paragraph(text):
+            continue
+
+        if not text or tok_len <= 0:
+            continue
+
+        targets.append({
+            'local_no': local_no,
+            'tok_len': tok_len,
+            'text': text,
+        })
+
+    return targets
+
+
+def _action_completeness_targets(
+    con,
+    seg_id: str,
+):
+    rows = con.execute(
+        """
+        SELECT ss.local_no, s.tok_len, s.text
+        FROM segment_spans ss
+        JOIN spans s ON s.id=ss.span_id
+        WHERE ss.seg_id=?
+        ORDER BY ss.local_no
+        """,
+        (seg_id,),
+    ).fetchall()
+
+    return _select_action_completeness_rows(rows)
+
+
+def _action_coverage_targets(con, seg_id: str, parsed):
+    rows = con.execute(
+        """
+        SELECT ss.local_no, s.tok_len, s.text
+        FROM segment_spans ss
+        JOIN spans s ON s.id=ss.span_id
+        WHERE ss.seg_id=?
+        ORDER BY ss.local_no
+        """,
+        (seg_id,),
+    ).fetchall()
+
+    return _select_action_coverage_rows(rows, parsed)
+
+
+_COVERAGE_SPEECH_ACT_RE = re.compile(
+    r'\b(?:asked|said|told|replied|answered)\b',
+    re.I,
+)
+
+_SOURCE_HEDGE_RE = re.compile(
+    r'\b(?:as\s+if|as\s+though)\b',
+    re.I,
+)
+
+_HEDGE_LEAK_TAIL_RE = re.compile(
+    r'\s+(?:as|because)\s+\w+\s+'
+    r'(?:'
+    r'want(?:ed|s)?|'
+    r'intend(?:ed|s)?|'
+    r'thought|think(?:s|ing)?|'
+    r'heard|hear(?:s|ing)?|'
+    r'felt|feel(?:s|ing)?|'
+    r'knew|know(?:s|ing)?|'
+    r'believ(?:e|ed|es|ing)|'
+    r'seem(?:ed|s)?|'
+    r'appear(?:ed|s)?'
+    r')\b.*$',
+    re.I,
+)
+
+
+def _action_subject_tail(payload: str):
+    parts = payload.strip().split(maxsplit=1)
+
+    if len(parts) != 2:
+        return None
+
+    raw_subject, raw_tail = parts
+
+    # This guard intentionally handles the common canonical
+    # single-token actor form only. Do not pretend to solve
+    # general semantic role labeling here.
+    if not raw_subject[:1].isupper():
+        return None
+
+    subject = norm(raw_subject)
+
+    tail = re.sub(
+        r'\b(?:a|an|the)\b',
+        ' ',
+        raw_tail,
+        flags=re.I,
+    )
+    tail = norm(
+        re.sub(r'\s+', ' ', tail).strip()
+    )
+
+    if not subject or not tail:
+        return None
+
+    return subject, tail
+
+
+def _existing_action_roles(parsed: Parsed | None):
+    roles = {}
+
+    if parsed is None:
+        return roles
+
+    for record in parsed.records:
+        if record.tag != 'EV':
+            continue
+
+        parsed_action = _action_subject_tail(
+            record.payload
+        )
+
+        if parsed_action is None:
+            continue
+
+        subject, tail = parsed_action
+
+        key = (
+            tuple(record.spans),
+            tail,
+        )
+
+        roles.setdefault(
+            key,
+            set(),
+        ).add(subject)
+
+    return roles
+
+
+
+_ACTION_SURFACE_SUBJECT_PRONOUNS = {
+    'he',
+    'she',
+    'they',
+    'it',
+}
+
+_ACTION_SURFACE_ARTICLES = {
+    'a',
+    'an',
+    'the',
+}
+
+
+def _action_surface_tokens(
+    text: str,
+):
+    return [
+        {
+            'raw': match.group(0),
+            'norm': match.group(0).casefold(),
+        }
+        for match in re.finditer(
+            r"[A-Za-z][A-Za-z'-]*|[0-9]+",
+            text,
+        )
+    ]
+
+
+def _action_surface_filtered_tokens(
+    text: str,
+):
+    return [
+        token
+        for token in _action_surface_tokens(text)
+        if token['norm']
+        not in _ACTION_SURFACE_ARTICLES
+    ]
+
+
+def _repair_action_surface_subject(
+    payload: str,
+    source: str,
+) -> tuple[str, bool]:
+    """
+    Undo unsupported named-subject canonicalization.
+
+    This is deliberately NOT coreference resolution.
+
+    If an EV claims a named actor but the exact action tail occurs
+    in SOURCE with one literal subject pronoun, restore that source
+    pronoun.
+
+    Precision rules:
+    - already-pronominal subjects are untouched;
+    - explicit named source matches win and remain untouched;
+    - exactly one pronoun+tail source match is required;
+    - no guessing among multiple matches.
+    """
+
+    parts = payload.strip().split(
+        maxsplit=1,
+    )
+
+    if len(parts) != 2:
+        return payload, False
+
+    subject, tail = parts
+
+    if (
+        subject.casefold()
+        in _ACTION_SURFACE_SUBJECT_PRONOUNS
+    ):
+        return payload, False
+
+    if not subject[:1].isupper():
+        return payload, False
+
+    tail_tokens = [
+        token['norm']
+        for token
+        in _action_surface_filtered_tokens(tail)
+    ]
+
+    if not tail_tokens:
+        return payload, False
+
+    source_tokens = (
+        _action_surface_filtered_tokens(
+            source
+        )
+    )
+
+    n = len(tail_tokens)
+
+    # If SOURCE literally supports the named subject for this
+    # exact tail, do not rewrite it even if a pronoun occurrence
+    # also exists elsewhere.
+    subject_norm = subject.casefold()
+
+    for i in range(
+        1,
+        len(source_tokens) - n + 1,
+    ):
+        previous = source_tokens[i - 1]
+
+        actual = [
+            token['norm']
+            for token
+            in source_tokens[i:i + n]
+        ]
+
+        if (
+            previous['norm'] == subject_norm
+            and actual == tail_tokens
+        ):
+            return payload, False
+
+    hits = []
+
+    for i in range(
+        1,
+        len(source_tokens) - n + 1,
+    ):
+        previous = source_tokens[i - 1]
+
+        actual = [
+            token['norm']
+            for token
+            in source_tokens[i:i + n]
+        ]
+
+        if actual != tail_tokens:
+            continue
+
+        if (
+            previous['norm']
+            in _ACTION_SURFACE_SUBJECT_PRONOUNS
+        ):
+            hits.append(
+                previous['raw']
+            )
+
+    if len(hits) != 1:
+        return payload, False
+
+    return (
+        hits[0] + ' ' + tail,
+        True,
+    )
+
+
+
+_ACTION_CLAUSAL_AUX_RE = re.compile(
+    r'\b(?:'
+    r'am|is|are|was|were|be|been|being|'
+    r'have|has|had|'
+    r'do|does|did|'
+    r'can|could|will|would|shall|should|'
+    r'may|might|must'
+    r')\b',
+    re.I,
+)
+
+_ACTION_VERBAL_SURFACE_RE = re.compile(
+    r"\b[A-Za-z][A-Za-z'-]*(?:ed|ing)\b",
+    re.I,
+)
+
+_ACTION_HEDGED_TO_RE = re.compile(
+    r'\b(?:'
+    r'seem|seems|seemed|'
+    r'appear|appears|appeared'
+    r')\s+to\s+'
+    r'(?P<verb>[A-Za-z][A-Za-z\'-]*)\b'
+    r'(?P<tail>[^.!?]*)',
+    re.I,
+)
+
+
+def _action_content_looks_clausal(
+    text: str,
+) -> bool:
+    """
+    Conservative syntactic evidence that material following an
+    ambiguous reporting verb such as 'claim' is a proposition,
+    not merely a possessed/acquired object.
+
+    Positive:
+        claimed that the mast shifted
+        claimed the mast had shifted
+        claimed the mast shifted
+
+    Negative:
+        claimed the prize
+        claimed ownership
+    """
+
+    text = (text or '').strip()
+
+    if not text:
+        return False
+
+    if re.match(
+        r'^that\b',
+        text,
+        re.I,
+    ):
+        return True
+
+    if _ACTION_CLAUSAL_AUX_RE.search(
+        text
+    ):
+        return True
+
+    words = re.findall(
+        r"[A-Za-z][A-Za-z'-]*",
+        text,
+    )
+
+    if len(words) >= 2:
+        # A non-initial verbal surface is evidence of a clause:
+        #
+        #   the mast shifted
+        #   antenna leaning
+        #
+        # This deliberately avoids treating a single noun phrase
+        # such as "the prize" as reported content.
+        remainder = ' '.join(
+            words[1:]
+        )
+
+        if _ACTION_VERBAL_SURFACE_RE.search(
+            remainder
+        ):
+            return True
+
+    return False
+
+
+def _coverage_ev_is_reported_speech(
+    payload: str,
+    source: str,
+) -> bool:
+    """
+    Detect ACTION-COVERAGE records that are actually communication
+    acts already owned by SAY.
+
+    This reuses the existing source-aware indirect-speech verifier
+    rather than maintaining another communication ontology.
+
+    'claim' is lexically ambiguous:
+        claimed that the mast shifted  -> communication
+        claimed the prize              -> ordinary action
+
+    Therefore claim requires clausal complement evidence.
+    """
+
+    parts = payload.strip().split(
+        maxsplit=2,
+    )
+
+    if len(parts) < 3:
+        return False
+
+    speaker, predicate, content = parts
+
+    if not _INDIRECT_COMM_RE.fullmatch(
+        predicate
+    ):
+        return False
+
+    predicate_fold = predicate.casefold()
+
+    if predicate_fold in {
+        'claim',
+        'claims',
+        'claimed',
+        'claiming',
+    }:
+        if not _action_content_looks_clausal(
+            content
+        ):
+            return False
+
+    return _source_supports_indirect_speech(
+        source,
+        speaker,
+        content,
+    )
+
+
+def _action_possible_bases(
+    word: str,
+) -> set[str]:
+    """
+    Small morphology helper used only for comparing an extracted
+    action predicate with a literal source predicate.
+
+    It is deliberately lexical-agnostic: no narrative verb list.
+    """
+
+    word = (
+        word.casefold()
+        .strip(" \t\r\n.,;:!?\"'“”‘’")
+    )
+
+    if not word:
+        return set()
+
+    bases = {word}
+
+    if len(word) > 4 and word.endswith('ied'):
+        bases.add(
+            word[:-3] + 'y'
+        )
+
+    if len(word) > 3 and word.endswith('ed'):
+        stem = word[:-2]
+        bases.add(stem)
+
+        # moved -> move
+        bases.add(
+            stem + 'e'
+        )
+
+        # stopped -> stop
+        if (
+            len(stem) >= 2
+            and stem[-1] == stem[-2]
+        ):
+            bases.add(
+                stem[:-1]
+            )
+
+    if len(word) > 4 and word.endswith('ing'):
+        stem = word[:-3]
+        bases.add(stem)
+
+        # moving -> move
+        bases.add(
+            stem + 'e'
+        )
+
+        # running -> run
+        if (
+            len(stem) >= 2
+            and stem[-1] == stem[-2]
+        ):
+            bases.add(
+                stem[:-1]
+            )
+
+    if len(word) > 3 and word.endswith('ies'):
+        bases.add(
+            word[:-3] + 'y'
+        )
+
+    if len(word) > 3 and word.endswith('es'):
+        bases.add(
+            word[:-2]
+        )
+
+    if len(word) > 2 and word.endswith('s'):
+        bases.add(
+            word[:-1]
+        )
+
+    return {
+        base
+        for base in bases
+        if base
+    }
+
+
+def _action_predicates_match(
+    left: str,
+    right: str,
+) -> bool:
+    return bool(
+        _action_possible_bases(left)
+        & _action_possible_bases(right)
+    )
+
+
+def _action_meaningful_words(
+    text: str,
+) -> set[str]:
+    stop = {
+        'a',
+        'an',
+        'the',
+        'to',
+        'of',
+        'in',
+        'on',
+        'at',
+        'by',
+        'with',
+        'from',
+        'for',
+        'and',
+        'or',
+        'but',
+        'than',
+        'that',
+        'this',
+        'it',
+        'he',
+        'she',
+        'they',
+        'his',
+        'her',
+        'their',
+    }
+
+    return {
+        word.casefold()
+        for word in re.findall(
+            r"[A-Za-z][A-Za-z'-]*",
+            text,
+        )
+        if (
+            len(word) >= 3
+            and word.casefold() not in stop
+        )
+    }
+
+
+def _coverage_ev_is_hedged_proposition(
+    payload: str,
+    source: str,
+) -> bool:
+    """
+    Detect an EV hardened from:
+
+        seemed to <verb>
+        appeared to <verb>
+
+    Compare the extracted action predicate to the literal embedded
+    source predicate. A hedge elsewhere in the paragraph is never
+    enough by itself.
+
+    Examples:
+        It seemed to lean farther east.
+        EV: Vero leaned the antenna farther east
+            -> DROP
+
+        It seemed unstable. Vero examined the antenna.
+        EV: Vero examined the antenna
+            -> KEEP
+    """
+
+    parts = payload.strip().split(
+        maxsplit=2,
+    )
+
+    if len(parts) < 2:
+        return False
+
+    candidate_predicate = parts[1]
+
+    candidate_tail = (
+        parts[2]
+        if len(parts) >= 3
+        else ''
+    )
+
+    candidate_words = (
+        _action_meaningful_words(
+            candidate_tail
+        )
+    )
+
+    for match in _ACTION_HEDGED_TO_RE.finditer(
+        source
+    ):
+        embedded_predicate = match.group(
+            'verb'
+        )
+
+        if not _action_predicates_match(
+            candidate_predicate,
+            embedded_predicate,
+        ):
+            continue
+
+        hedge_tail_words = (
+            _action_meaningful_words(
+                match.group('tail')
+            )
+        )
+
+        overlap = (
+            candidate_words
+            & hedge_tail_words
+        )
+
+        # Predicate identity alone is enough for a very short
+        # extracted action. For richer candidates require at
+        # least one additional literal content anchor.
+        if not candidate_words:
+            return True
+
+        if overlap:
+            return True
+
+    return False
+
+
+
+_ACTION_COMPLEMENT_PREFIX_RE = re.compile(
+    r'^\s*["\'”’]*\s*'
+    r'(?P<prep>'
+    r'in|into|inside|'
+    r'on|onto|'
+    r'under|beneath|beside|behind|'
+    r'to|from|'
+    r'through|across|'
+    r'toward|towards|'
+    r'near|at|over|around|within'
+    r')\b',
+    re.I,
+)
+
+_ACTION_COMPLEMENT_END_RE = re.compile(
+    r'[,.;!?]'
+    r'|\s+\b(?:and|but|then)\b',
+    re.I,
+)
+
+
+
+def _action_surface_positioned_filtered_tokens(
+    text: str,
+):
+    """
+    Surface tokens with source character offsets.
+
+    Kept separate from _action_surface_filtered_tokens because
+    the older surface-subject machinery intentionally needs only
+    raw/norm token identity, while literal complement completion
+    must know exactly where the matched source phrase ends.
+    """
+
+    out = []
+
+    for match in re.finditer(
+        r"[A-Za-z][A-Za-z'-]*|[0-9]+",
+        text,
+    ):
+        raw = match.group(0)
+        normalized = raw.casefold()
+
+        if (
+            normalized
+            in _ACTION_SURFACE_ARTICLES
+        ):
+            continue
+
+        out.append(
+            {
+                "raw": raw,
+                "norm": normalized,
+                "start": match.start(),
+                "end": match.end(),
+            }
+        )
+
+    return out
+
+
+def _extend_action_literal_complement(
+    payload: str,
+    source: str,
+) -> tuple[str, bool]:
+    """
+    Extend an ACTION-COVERAGE EV only with a literal source
+    complement immediately following that exact action surface.
+
+    Examples:
+        Rafi wrote "antenna cable"
+            + source: ... "antenna cable" in the catalog
+            -> ... in the catalog
+
+        Arden carried the toolbox back
+            + source: ... back to the maintenance bench
+            -> ... to the maintenance bench
+
+    Precision rules:
+    - no semantic paraphrase;
+    - no verb ontology;
+    - no coreference resolution;
+    - unique literal token occurrence required;
+    - only a structural prepositional continuation is accepted;
+    - closing quotation punctuation may occur between the matched
+      payload and its complement.
+    """
+
+    payload_tokens = (
+        _action_surface_positioned_filtered_tokens(
+            payload
+        )
+    )
+
+    source_tokens = (
+        _action_surface_positioned_filtered_tokens(
+            source
+        )
+    )
+
+    if not payload_tokens:
+        return payload, False
+
+    wanted = [
+        token["norm"]
+        for token in payload_tokens
+    ]
+
+    n = len(wanted)
+
+    hits = []
+
+    for i in range(
+        0,
+        len(source_tokens) - n + 1,
+    ):
+        actual = [
+            token["norm"]
+            for token
+            in source_tokens[i:i + n]
+        ]
+
+        if actual != wanted:
+            continue
+
+        hits.append(
+            source_tokens[
+                i + n - 1
+            ]["end"]
+        )
+
+    # Multiple literal occurrences are ambiguous.
+    if len(hits) != 1:
+        return payload, False
+
+    end = hits[0]
+
+    remainder = source[end:]
+
+    prefix = (
+        _ACTION_COMPLEMENT_PREFIX_RE.match(
+            remainder
+        )
+    )
+
+    if prefix is None:
+        return payload, False
+
+    # Skip whitespace / a closing quote but begin the appended
+    # material exactly at the source preposition.
+    complement_source = remainder[
+        prefix.start("prep"):
+    ]
+
+    boundary = (
+        _ACTION_COMPLEMENT_END_RE.search(
+            complement_source
+        )
+    )
+
+    if boundary is None:
+        complement = (
+            complement_source.strip()
+        )
+    else:
+        complement = (
+            complement_source[
+                :boundary.start()
+            ].strip()
+        )
+
+    if not complement:
+        return payload, False
+
+    result = (
+        payload.rstrip()
+        + " "
+        + complement
+    )
+
+    if result == payload:
+        return payload, False
+
+    return result, True
+
+
+
+_ACTION_BRIDGE_PRONOUNS = {
+    "he",
+    "she",
+    "they",
+}
+
+_ACTION_BRIDGE_NAME_RE = re.compile(
+    r"\b[A-Z][A-Za-z'-]+\b"
+)
+
+_ACTION_BRIDGE_NON_NAMES = {
+    "A",
+    "An",
+    "At",
+    "After",
+    "Before",
+    "But",
+    "Later",
+    "Next",
+    "On",
+    "Instead",
+    "Meanwhile",
+    "The",
+    "Then",
+    "They",
+    "He",
+    "She",
+    "When",
+    "While",
+}
+
+_ACTION_BRIDGE_QUOTED_RE = re.compile(
+    r'["“][^"”]*["”]',
+    re.S,
+)
+
+_ACTION_BRIDGE_PERSON_DESCRIPTOR_RE = re.compile(
+    r"\b(?:a|an)\s+"
+    r"(?:man|woman|boy|girl|person)\b",
+    re.I,
+)
+
+_ACTION_BRIDGE_APPOSITION_RE = re.compile(
+    r"\b(?P<name>[A-Z][A-Za-z'-]+)"
+    r"\s*,\s+(?:a|an)\s+"
+    r"(?P<label>"
+    r"man|woman|boy|girl|male|female"
+    r")\b"
+)
+
+_ACTION_BRIDGE_LABEL_PRONOUN = {
+    "man": "he",
+    "boy": "he",
+    "male": "he",
+    "woman": "she",
+    "girl": "she",
+    "female": "she",
+}
+
+
+def _action_bridge_sentence_spans(
+    text: str,
+):
+    out = []
+
+    for match in re.finditer(
+        r"[^.!?]+(?:[.!?]+[\"”’]?)?",
+        text,
+        re.S,
+    ):
+        value = match.group(0)
+
+        if not value.strip():
+            continue
+
+        out.append(
+            {
+                "start": match.start(),
+                "end": match.end(),
+                "text": value.strip(),
+            }
+        )
+
+    return out
+
+
+def _action_bridge_names_outside_quotes(
+    text: str,
+):
+    clean = _ACTION_BRIDGE_QUOTED_RE.sub(
+        " ",
+        text,
+    )
+
+    names = []
+
+    for name in _ACTION_BRIDGE_NAME_RE.findall(
+        clean
+    ):
+        if name in _ACTION_BRIDGE_NON_NAMES:
+            continue
+
+        if name not in names:
+            names.append(name)
+
+    return names
+
+
+def _action_bridge_pronoun_tail(
+    payload: str,
+):
+    parts = payload.strip().split(
+        maxsplit=1,
+    )
+
+    if len(parts) != 2:
+        return None
+
+    subject, tail = parts
+
+    if (
+        subject.casefold()
+        not in _ACTION_BRIDGE_PRONOUNS
+    ):
+        return None
+
+    return subject, tail
+
+
+def _action_bridge_locate_sentence(
+    source: str,
+    pronoun: str,
+    tail: str,
+):
+    """
+    Locate a unique literal action tail in a sentence whose
+    grammatical surface subject is the supplied pronoun.
+
+    Coordinated verbs are allowed:
+
+        He snatched it, wrapped it, and tossed it.
+
+    Coverage may have emitted:
+        He wrapped it
+        He tossed it
+
+    The source sentence still has literal grammatical subject He.
+    """
+
+    source_fold = source.casefold()
+    tail_fold = tail.casefold()
+
+    hits = []
+    pos = 0
+
+    while True:
+        index = source_fold.find(
+            tail_fold,
+            pos,
+        )
+
+        if index < 0:
+            break
+
+        hits.append(index)
+        pos = index + 1
+
+    if len(hits) != 1:
+        return None
+
+    hit = hits[0]
+    sentences = _action_bridge_sentence_spans(
+        source
+    )
+
+    for index, sentence in enumerate(
+        sentences
+    ):
+        if not (
+            sentence["start"]
+            <= hit
+            < sentence["end"]
+        ):
+            continue
+
+        head = (
+            sentence["text"]
+            .lstrip(
+                ' "\'“”‘’'
+            )
+        )
+
+        # "Instead he ..." is a supported discourse form,
+        # so strip only that explicit connector here.
+        head = re.sub(
+            r"^\s*Instead\s+",
+            "",
+            head,
+            count=1,
+            flags=re.I,
+        )
+
+        if not re.match(
+            rf"^{re.escape(pronoun)}\b",
+            head,
+            re.I,
+        ):
+            return None
+
+        previous = (
+            sentences[index - 1]["text"]
+            if index > 0
+            else ""
+        )
+
+        return {
+            "sentence": sentence["text"],
+            "previous": previous,
+        }
+
+    return None
+
+
+def _action_bridge_apposition_antecedent(
+    previous: str,
+    pronoun: str,
+):
+    matches = []
+
+    for match in (
+        _ACTION_BRIDGE_APPOSITION_RE.finditer(
+            previous
+        )
+    ):
+        label = (
+            match.group("label")
+            .casefold()
+        )
+
+        if (
+            _ACTION_BRIDGE_LABEL_PRONOUN.get(
+                label
+            )
+            != pronoun.casefold()
+        ):
+            continue
+
+        matches.append(
+            match.group("name")
+        )
+
+    unique = list(
+        dict.fromkeys(matches)
+    )
+
+    if len(unique) != 1:
+        return None
+
+    return unique[0]
+
+
+def _action_bridge_unique_previous_subject(
+    previous: str,
+):
+    """
+    Used ONLY behind an explicit contrastive "Instead".
+
+    This is intentionally not a general previous-sentence
+    coreference heuristic.
+    """
+
+    unquoted = (
+        _ACTION_BRIDGE_QUOTED_RE.sub(
+            " ",
+            previous,
+        )
+        .strip()
+    )
+
+    if (
+        _ACTION_BRIDGE_PERSON_DESCRIPTOR_RE.search(
+            unquoted
+        )
+    ):
+        return None
+
+    names = (
+        _action_bridge_names_outside_quotes(
+            previous
+        )
+    )
+
+    if len(names) != 1:
+        return None
+
+    name = names[0]
+
+    if not re.match(
+        rf"^\s*{re.escape(name)}\b",
+        unquoted,
+    ):
+        return None
+
+    return name
+
+
+def _bridge_action_surface_subject(
+    payload: str,
+    source: str,
+) -> tuple[str, bool, str | None]:
+    """
+    Canonicalize a literal pronoun subject to a named actor ONLY
+    when SOURCE provides positive reference evidence.
+
+    Supported evidence:
+
+    1. Explicit apposition:
+           Ivo, a man ... . He ...
+           Lian, a woman ... . She ...
+
+       Gender comes from source text, never from the name.
+
+    2. Explicit contrastive continuation:
+           Arden refused ...
+           Instead he closed ...
+
+       "Instead" ties the alternative action to the immediately
+       preceding unique named subject.
+
+    Plain discourse continuation is deliberately insufficient:
+
+           Marek marked the time. He stayed ...
+
+       remains unresolved.
+    """
+
+    parsed = _action_bridge_pronoun_tail(
+        payload
+    )
+
+    if parsed is None:
+        return payload, False, None
+
+    pronoun, tail = parsed
+
+    located = _action_bridge_locate_sentence(
+        source,
+        pronoun,
+        tail,
+    )
+
+    if located is None:
+        return payload, False, None
+
+    previous = located["previous"]
+
+    name = (
+        _action_bridge_apposition_antecedent(
+            previous,
+            pronoun,
+        )
+    )
+
+    reason = None
+
+    if name is not None:
+        reason = "explicit-apposition"
+
+    else:
+        sentence = located["sentence"]
+
+        if re.match(
+            r"^\s*Instead\s+"
+            r"(?:he|she|they)\b",
+            sentence,
+            re.I,
+        ):
+            name = (
+                _action_bridge_unique_previous_subject(
+                    previous
+                )
+            )
+
+            if name is not None:
+                reason = "contrastive-instead"
+
+    if name is None:
+        return payload, False, None
+
+    return (
+        name + " " + tail,
+        True,
+        reason,
+    )
+
+
+
+_ACTION_OBJECT_IT_RE = re.compile(
+    r"\bit\b",
+    re.I,
+)
+
+_ACTION_OBJECT_NAMED_SUBJECT_RE = re.compile(
+    r"^(?P<subject>[A-Z][A-Za-z'-]+)\s+"
+)
+
+_ACTION_OBJECT_POSSESSION_RE = re.compile(
+    r"^\s*(?P<subject>[A-Z][A-Za-z'-]+)"
+    r"\s*\|\s*possession\s*\|\s*"
+    r"holding\s+(?P<object>.+?)\s*$",
+    re.I,
+)
+
+_ACTION_OBJECT_TRANSFER_RE_TEMPLATE = (
+    r"\b(?P<object>"
+    r"(?:the|a|an)\s+"
+    r"[A-Za-z][A-Za-z'-]*"
+    r"(?:\s+[A-Za-z][A-Za-z'-]*){{0,3}}"
+    r")\s+to\s+{subject}\b"
+)
+
+
+def _action_object_canonical_phrase(
+    value: str,
+) -> str | None:
+    value = value.strip(
+        " \t\r\n\"'“”‘’.,;:!?"
+    )
+
+    if not value:
+        return None
+
+    if not re.match(
+        r"^(?:the|a|an)\b",
+        value,
+        re.I,
+    ):
+        value = "the " + value
+
+    return value
+
+
+def _action_object_source_contains(
+    source: str,
+    object_phrase: str,
+) -> bool:
+    bare = re.sub(
+        r"^(?:the|a|an)\s+",
+        "",
+        object_phrase,
+        flags=re.I,
+    ).strip()
+
+    if not bare:
+        return False
+
+    return bool(
+        re.search(
+            rf"\b{re.escape(bare)}\b",
+            source,
+            re.I,
+        )
+    )
+
+
+def _action_object_possession_candidate(
+    subject: str,
+    source: str,
+    local_no: int | None,
+    existing: Parsed | None,
+) -> str | None:
+    """
+    Resolve an object only from an EXPLICIT possession ST
+    attached to the same local source paragraph.
+
+        Ivo | possession | holding compass
+        Ivo snatched it
+          -> Ivo snatched the compass
+
+    No cross-paragraph state lookup here.
+    """
+
+    if (
+        existing is None
+        or local_no is None
+    ):
+        return None
+
+    candidates = []
+
+    for record in existing.records:
+        if record.tag != "ST":
+            continue
+
+        if record.epistemic != "EXPLICIT":
+            continue
+
+        if local_no not in record.spans:
+            continue
+
+        match = (
+            _ACTION_OBJECT_POSSESSION_RE.match(
+                record.payload
+            )
+        )
+
+        if match is None:
+            continue
+
+        if (
+            match.group("subject").casefold()
+            != subject.casefold()
+        ):
+            continue
+
+        value = (
+            _action_object_canonical_phrase(
+                match.group("object")
+            )
+        )
+
+        if value is None:
+            continue
+
+        if not _action_object_source_contains(
+            source,
+            value,
+        ):
+            continue
+
+        candidates.append(value)
+
+    normalized = list(
+        dict.fromkeys(
+            value.casefold()
+            for value in candidates
+        )
+    )
+
+    if len(normalized) != 1:
+        return None
+
+    wanted = normalized[0]
+
+    for value in candidates:
+        if value.casefold() == wanted:
+            return value
+
+    return None
+
+
+def _action_object_transfer_candidate(
+    subject: str,
+    payload: str,
+    source: str,
+) -> str | None:
+    """
+    Resolve only the strong local transfer pattern:
+
+        Elena returned the canister to Tomas.
+        Tomas tucked it beneath his coat.
+
+    The immediately preceding source sentence must contain one
+    article-headed object phrase explicitly transferred to the
+    current named subject.
+
+    This is intentionally not a nearest-noun heuristic.
+    """
+
+    sentences = (
+        _action_bridge_sentence_spans(
+            source
+        )
+    )
+
+    parts = payload.split(
+        maxsplit=1,
+    )
+
+    if len(parts) != 2:
+        return None
+
+    tail = parts[1]
+    current_index = None
+
+    for index, sentence in enumerate(
+        sentences
+    ):
+        text = sentence["text"]
+
+        if not re.match(
+            rf"^\s*{re.escape(subject)}\b",
+            text,
+            re.I,
+        ):
+            continue
+
+        if (
+            tail.casefold()
+            not in text.casefold()
+        ):
+            continue
+
+        if current_index is not None:
+            # More than one candidate current sentence.
+            return None
+
+        current_index = index
+
+    if (
+        current_index is None
+        or current_index == 0
+    ):
+        return None
+
+    previous = sentences[
+        current_index - 1
+    ]["text"]
+
+    pattern = re.compile(
+        _ACTION_OBJECT_TRANSFER_RE_TEMPLATE.format(
+            subject=re.escape(subject)
+        ),
+        re.I,
+    )
+
+    matches = list(
+        pattern.finditer(previous)
+    )
+
+    if len(matches) != 1:
+        return None
+
+    value = (
+        _action_object_canonical_phrase(
+            matches[0].group("object")
+        )
+    )
+
+    if value is None:
+        return None
+
+    if not _action_object_source_contains(
+        source,
+        value,
+    ):
+        return None
+
+    return value
+
+
+def _bridge_action_object_reference(
+    payload: str,
+    source: str,
+    local_no: int | None,
+    existing: Parsed | None,
+) -> tuple[str, bool, str | None]:
+    """
+    Resolve literal object pronoun `it` only from positive evidence.
+
+    Supported evidence:
+
+    1. EXPLICIT same-paragraph possession state:
+           Ivo | possession | holding compass
+           Ivo snatched it
+              -> Ivo snatched the compass
+
+    2. Immediate explicit transfer to the named subject:
+           Elena returned the canister to Tomas.
+           Tomas tucked it ...
+              -> Tomas tucked the canister ...
+
+    Conflicting evidence causes abstention.
+
+    No nearest-noun resolution.
+    No generic recency heuristic.
+    No inferred state.
+    """
+
+    if not _ACTION_OBJECT_IT_RE.search(
+        payload
+    ):
+        return payload, False, None
+
+    subject_match = (
+        _ACTION_OBJECT_NAMED_SUBJECT_RE.match(
+            payload
+        )
+    )
+
+    if subject_match is None:
+        return payload, False, None
+
+    subject = subject_match.group(
+        "subject"
+    )
+
+    evidence = []
+
+    possession = (
+        _action_object_possession_candidate(
+            subject,
+            source,
+            local_no,
+            existing,
+        )
+    )
+
+    if possession is not None:
+        evidence.append(
+            (
+                possession,
+                "explicit-possession",
+            )
+        )
+
+    transfer = (
+        _action_object_transfer_candidate(
+            subject,
+            payload,
+            source,
+        )
+    )
+
+    if transfer is not None:
+        evidence.append(
+            (
+                transfer,
+                "explicit-transfer",
+            )
+        )
+
+    if not evidence:
+        return payload, False, None
+
+    normalized = {
+        value.casefold()
+        for value, _ in evidence
+    }
+
+    if len(normalized) != 1:
+        return payload, False, None
+
+    object_phrase = evidence[0][0]
+
+    reason = "+".join(
+        source_kind
+        for _, source_kind in evidence
+    )
+
+    value = _ACTION_OBJECT_IT_RE.sub(
+        object_phrase,
+        payload,
+    )
+
+    if value == payload:
+        return payload, False, None
+
+    return value, True, reason
+
+
+
+def _extend_action_coordinated_tail_complement(
+    payload: str,
+    source: str,
+) -> tuple[str, bool]:
+    """
+    Recover a literal trailing source complement when canonical
+    subject/object normalization prevents the whole EV from
+    matching SOURCE literally.
+
+    Example:
+
+        canonical:
+            Ivo tossed the compass across the room
+
+        source:
+            He snatched it, wrapped it in a scarf,
+            and tossed it across the room to Lian
+
+        result:
+            Ivo tossed the compass across the room to Lian
+
+    Precision rules:
+    - canonical subject must be an explicit name;
+    - action verb itself must occur literally in SOURCE;
+    - require a >=2-token literal trailing suffix;
+    - verb + suffix must identify exactly one source occurrence;
+    - do not cross sentence punctuation;
+    - appended material must begin with the existing structural
+      complement preposition grammar;
+    - no subject resolution;
+    - no object resolution;
+    - no paraphrase.
+    """
+
+    payload_tokens = (
+        _action_surface_positioned_filtered_tokens(
+            payload
+        )
+    )
+
+    source_tokens = (
+        _action_surface_positioned_filtered_tokens(
+            source
+        )
+    )
+
+    if len(payload_tokens) < 4:
+        return payload, False
+
+    subject = payload_tokens[0]["raw"]
+
+    if not re.fullmatch(
+        r"[A-Z][A-Za-z'-]+",
+        subject,
+    ):
+        return payload, False
+
+    # A capitalized pronoun such as "He" also matches the lexical
+    # name shape above. This layer must operate only after subject
+    # canonicalization, never perform subject resolution itself.
+    if (
+        subject.casefold()
+        in _ACTION_BRIDGE_PRONOUNS
+    ):
+        return payload, False
+
+    action_tokens = payload_tokens[1:]
+
+    if len(action_tokens) < 3:
+        return payload, False
+
+    verb = action_tokens[0]["norm"]
+
+    suffix_candidates = []
+
+    # Skip the verb itself. Try longest trailing literal suffix
+    # first, but never accept a one-token suffix.
+    for start in range(
+        1,
+        len(action_tokens) - 1,
+    ):
+        suffix = [
+            token["norm"]
+            for token
+            in action_tokens[start:]
+        ]
+
+        if len(suffix) < 2:
+            continue
+
+        suffix_candidates.append(
+            suffix
+        )
+
+    suffix_candidates.sort(
+        key=len,
+        reverse=True,
+    )
+
+    for suffix in suffix_candidates:
+        matches = []
+
+        for verb_i, token in enumerate(
+            source_tokens
+        ):
+            if token["norm"] != verb:
+                continue
+
+            max_start = min(
+                len(source_tokens)
+                - len(suffix),
+                verb_i + 8,
+            )
+
+            for suffix_i in range(
+                verb_i + 1,
+                max_start + 1,
+            ):
+                actual = [
+                    item["norm"]
+                    for item
+                    in source_tokens[
+                        suffix_i:
+                        suffix_i + len(suffix)
+                    ]
+                ]
+
+                if actual != suffix:
+                    continue
+
+                suffix_end_i = (
+                    suffix_i
+                    + len(suffix)
+                    - 1
+                )
+
+                between = source[
+                    source_tokens[
+                        verb_i
+                    ]["end"]:
+                    source_tokens[
+                        suffix_end_i
+                    ]["end"]
+                ]
+
+                if re.search(
+                    r"[.!?]",
+                    between,
+                ):
+                    continue
+
+                matches.append(
+                    source_tokens[
+                        suffix_end_i
+                    ]["end"]
+                )
+
+        # The evidence must identify exactly one source action.
+        if len(matches) != 1:
+            continue
+
+        remainder = source[
+            matches[0]:
+        ]
+
+        prefix = (
+            _ACTION_COMPLEMENT_PREFIX_RE.match(
+                remainder
+            )
+        )
+
+        if prefix is None:
+            continue
+
+        complement_source = remainder[
+            prefix.start("prep"):
+        ]
+
+        boundary = (
+            _ACTION_COMPLEMENT_END_RE.search(
+                complement_source
+            )
+        )
+
+        if boundary is None:
+            complement = (
+                complement_source.strip()
+            )
+        else:
+            complement = (
+                complement_source[
+                    :boundary.start()
+                ].strip()
+            )
+
+        if not complement:
+            continue
+
+        if (
+            complement.casefold()
+            in payload.casefold()
+        ):
+            continue
+
+        return (
+            payload.rstrip()
+            + " "
+            + complement,
+            True,
+        )
+
+    return payload, False
+
+
+
+# ============================================================
+# v0.1.20g: omission-focused ACTION GAP audit
+#
+# Main ACTION-COVERAGE remains authoritative first-pass
+# extraction. GAP is a second, small-batch recall pass.
+#
+# Precision policy:
+# - ordinary ACTION sanitizer runs first;
+# - GAP then requires semantic novelty;
+# - subject/predicate relation must be positively supported by
+#   literal SOURCE structure;
+# - unsupported named canonicalization may only move BACK toward
+#   a literal source pronoun;
+# - ambiguity => abstain.
+# ============================================================
+
+ACTION_GAP_SYSTEM = ACTION_COVERAGE_SYSTEM + """
+
+ADDITIONAL ROLE: OMISSION AUDITOR
+
+You are given SOURCE paragraphs plus EXISTING EV records already
+extracted from those paragraphs.
+
+Output ONLY explicit narratively useful actions present in SOURCE
+but NOT already represented by EXISTING EV records.
+
+Audit exhaustively:
+- sentence by sentence;
+- clause by clause;
+- include low-salience actions before, between, or after more
+  salient actions;
+- do not stop merely because another action in the sentence has
+  already been recorded.
+
+Do NOT repeat represented actions.
+Do NOT enrich or rewrite an existing action.
+Do NOT infer an action absent from SOURCE.
+If every useful explicit action is represented, emit nothing.
+
+The normal EV formatting and grounding rules still apply.
+"""
+
+
+_GAP_PERSON_PRONOUNS = {
+    'he',
+    'she',
+    'they',
+    'it',
+}
+
+_GAP_COORDINATED_PRONOUNS = {
+    'he',
+    'she',
+    'they',
+}
+
+_GAP_ARTICLE_SUBJECTS = {
+    'a',
+    'an',
+    'the',
+}
+
+
+def _gap_action_parts(
+    payload: str,
+):
+    tokens = re.findall(
+        r"[A-Za-z][A-Za-z'-]*|[0-9]+",
+        payload,
+    )
+
+    if len(tokens) < 2:
+        return None
+
+    subject = tokens[0]
+
+    # Do not accidentally interpret:
+    #
+    #   A train arrived
+    #
+    # as subject=A, predicate=train. Multi-token nominal subjects
+    # need a real parser later; GAP abstains for now.
+    if (
+        subject.casefold()
+        in _GAP_ARTICLE_SUBJECTS
+    ):
+        return None
+
+    return (
+        subject,
+        tokens[1],
+        tokens,
+    )
+
+
+def _gap_predicates_match(
+    left: str,
+    right: str,
+) -> bool:
+    return bool(
+        _action_possible_bases(left)
+        & _action_possible_bases(right)
+    )
+
+
+def _gap_content_words(
+    payload: str,
+):
+    parts = _gap_action_parts(
+        payload
+    )
+
+    if parts is None:
+        return set()
+
+    _subject, _predicate, tokens = parts
+
+    return _action_meaningful_words(
+        ' '.join(tokens[2:])
+    )
+
+
+def _gap_candidate_already_covered(
+    candidate: str,
+    existing: list[str],
+) -> bool:
+    cparts = _gap_action_parts(
+        candidate
+    )
+
+    if cparts is None:
+        return False
+
+    csubject, cpred, _ = cparts
+    csubject_cf = csubject.casefold()
+
+    cwords = _gap_content_words(
+        candidate
+    )
+
+    for prior in existing:
+        pparts = _gap_action_parts(
+            prior
+        )
+
+        if pparts is None:
+            continue
+
+        psubject, ppred, _ = pparts
+        psubject_cf = psubject.casefold()
+
+        # Different explicit named actors are not duplicates.
+        # Ordinary ACTION sanitizer has already restored literal
+        # pronouns where positive source evidence requires it.
+        if (
+            csubject_cf
+            not in _GAP_PERSON_PRONOUNS
+            and psubject_cf
+            not in _GAP_PERSON_PRONOUNS
+            and csubject_cf != psubject_cf
+        ):
+            continue
+
+        if not _gap_predicates_match(
+            cpred,
+            ppred,
+        ):
+            continue
+
+        pwords = _gap_content_words(
+            prior
+        )
+
+        if not cwords and not pwords:
+            return True
+
+        if not cwords or not pwords:
+            continue
+
+        overlap = (
+            len(cwords & pwords)
+            / max(
+                1,
+                min(
+                    len(cwords),
+                    len(pwords),
+                ),
+            )
+        )
+
+        if overlap >= 0.75:
+            return True
+
+    return False
+
+
+def _gap_sentence_chunks_for_predicate(
+    source: str,
+    predicate: str,
+):
+    sentences = [
+        chunk.strip()
+        for chunk in re.split(
+            r'(?<=[.!?])["”’]?\s+',
+            source,
+        )
+        if chunk.strip()
+    ]
+
+    result = []
+
+    for sentence in sentences:
+        words = re.findall(
+            r"[A-Za-z][A-Za-z'-]*|[0-9]+",
+            sentence,
+        )
+
+        if any(
+            _gap_predicates_match(
+                word,
+                predicate,
+            )
+            for word in words
+        ):
+            result.append(
+                sentence
+            )
+
+    return result
+
+
+def _gap_direct_subject_supported(
+    sentence: str,
+    subject: str,
+    predicate: str,
+) -> bool:
+    words = re.findall(
+        r"[A-Za-z][A-Za-z'-]*|[0-9]+",
+        sentence,
+    )
+
+    subject_cf = subject.casefold()
+
+    for i, word in enumerate(words):
+        if word.casefold() != subject_cf:
+            continue
+
+        if (
+            i + 1 < len(words)
+            and _gap_predicates_match(
+                words[i + 1],
+                predicate,
+            )
+        ):
+            return True
+
+        if (
+            i + 2 < len(words)
+            and words[i + 1].casefold()
+            in {
+                'has',
+                'have',
+                'had',
+                'is',
+                'are',
+                'was',
+                'were',
+            }
+            and _gap_predicates_match(
+                words[i + 2],
+                predicate,
+            )
+        ):
+            return True
+
+    return False
+
+
+def _gap_coordinated_subject_supported(
+    sentence: str,
+    subject: str,
+    predicate: str,
+) -> bool:
+    words = re.findall(
+        r"[A-Za-z][A-Za-z'-]*|[0-9]+",
+        sentence,
+    )
+
+    if not words:
+        return False
+
+    folded = [
+        word.casefold()
+        for word in words
+    ]
+
+    subject_cf = subject.casefold()
+
+    subject_positions = [
+        i
+        for i, word in enumerate(folded)
+        if word == subject_cf
+    ]
+
+    predicate_positions = [
+        i
+        for i, word in enumerate(words)
+        if _gap_predicates_match(
+            word,
+            predicate,
+        )
+    ]
+
+    prefix_words = {
+        'a',
+        'an',
+        'the',
+        'at',
+        'after',
+        'before',
+        'later',
+        'then',
+        'when',
+        'while',
+        'on',
+        'in',
+        'during',
+        'near',
+        'inside',
+        'outside',
+        'by',
+        'under',
+        'over',
+        'beside',
+        'around',
+        'toward',
+        'towards',
+        'through',
+    }
+
+    for predicate_i in predicate_positions:
+        prior_subjects = [
+            i
+            for i in subject_positions
+            if i < predicate_i
+        ]
+
+        if not prior_subjects:
+            continue
+
+        subject_i = max(
+            prior_subjects
+        )
+
+        between = folded[
+            subject_i + 1:
+            predicate_i
+        ]
+
+        if not between:
+            continue
+
+        if between[-1] not in {
+            'and',
+            'then',
+            'but',
+            'or',
+        }:
+            continue
+
+        if any(
+            word in _GAP_PERSON_PRONOUNS
+            for word in between[:-1]
+        ):
+            continue
+
+        prefix = words[:subject_i]
+
+        leading_actor = False
+
+        for token in prefix:
+            token_cf = token.casefold()
+
+            if token_cf in _GAP_PERSON_PRONOUNS:
+                leading_actor = True
+                break
+
+            if (
+                token[:1].isupper()
+                and token_cf
+                not in prefix_words
+            ):
+                leading_actor = True
+                break
+
+        if leading_actor:
+            continue
+
+        return True
+
+    return False
+
+
+def _gap_source_role_supported(
+    candidate: str,
+    source: str,
+) -> bool:
+    parts = _gap_action_parts(
+        candidate
+    )
+
+    if parts is None:
+        return False
+
+    subject, predicate, _tokens = parts
+
+    for sentence in (
+        _gap_sentence_chunks_for_predicate(
+            source,
+            predicate,
+        )
+    ):
+        if _gap_direct_subject_supported(
+            sentence,
+            subject,
+            predicate,
+        ):
+            return True
+
+        if _gap_coordinated_subject_supported(
+            sentence,
+            subject,
+            predicate,
+        ):
+            return True
+
+    return False
+
+
+def _repair_gap_coordinated_surface_subject(
+    candidate: str,
+    source: str,
+):
+    """
+    Undo unsupported named-subject canonicalization only by moving
+    toward a literal SOURCE pronoun in a coordinated clause.
+
+        Priya folded the map
+          ->
+        She folded the map
+
+    Never performs the reverse inference.
+    """
+
+    parts = _gap_action_parts(
+        candidate
+    )
+
+    if parts is None:
+        return candidate, False
+
+    subject, predicate, tokens = parts
+
+    if (
+        not subject[:1].isupper()
+        or subject.casefold()
+        in _GAP_COORDINATED_PRONOUNS
+    ):
+        return candidate, False
+
+    article_words = {
+        'a',
+        'an',
+        'the',
+    }
+
+    wanted_tail = [
+        token.casefold()
+        for token in tokens[2:]
+        if token.casefold()
+        not in article_words
+    ]
+
+    hits = []
+
+    for sentence in (
+        _gap_sentence_chunks_for_predicate(
+            source,
+            predicate,
+        )
+    ):
+        source_words = re.findall(
+            r"[A-Za-z][A-Za-z'-]*|[0-9]+",
+            sentence,
+        )
+
+        folded = [
+            word.casefold()
+            for word in source_words
+        ]
+
+        for predicate_i, word in enumerate(
+            source_words
+        ):
+            if not _gap_predicates_match(
+                word,
+                predicate,
+            ):
+                continue
+
+            source_tail = []
+
+            for token in source_words[
+                predicate_i + 1:
+            ]:
+                token_cf = token.casefold()
+
+                if token_cf not in article_words:
+                    source_tail.append(
+                        token_cf
+                    )
+
+                if (
+                    wanted_tail
+                    and len(source_tail)
+                    >= len(wanted_tail)
+                ):
+                    break
+
+            if (
+                wanted_tail
+                and source_tail[
+                    :len(wanted_tail)
+                ] != wanted_tail
+            ):
+                continue
+
+            if predicate_i <= 0:
+                continue
+
+            coordinator_i = (
+                predicate_i - 1
+            )
+
+            if folded[
+                coordinator_i
+            ] not in {
+                'and',
+                'then',
+                'but',
+                'or',
+            }:
+                continue
+
+            pronoun_positions = [
+                i
+                for i, token in enumerate(
+                    folded[:coordinator_i]
+                )
+                if token
+                in _GAP_COORDINATED_PRONOUNS
+            ]
+
+            if len(
+                pronoun_positions
+            ) != 1:
+                continue
+
+            pronoun_i = (
+                pronoun_positions[0]
+            )
+
+            if any(
+                token
+                in _GAP_COORDINATED_PRONOUNS
+                for token in folded[
+                    pronoun_i + 1:
+                    coordinator_i
+                ]
+            ):
+                continue
+
+            hits.append(
+                source_words[
+                    pronoun_i
+                ]
+            )
+
+    if len(hits) != 1:
+        return candidate, False
+
+    return (
+        hits[0]
+        + ' '
+        + ' '.join(tokens[1:]),
+        True,
+    )
+
+
+
+def _gap_existing_payload_subsumes(
+    broader: str,
+    narrower: str,
+) -> bool:
+    """
+    True when `broader` is a strictly more informative rendering of
+    the same apparent action as `narrower`.
+
+    Conservative GAP-prompt-only compaction.
+
+        Priya unfolded a survey map across the truck hood
+            subsumes
+        Priya unfolded a survey map
+
+    Different actors or predicates never subsume each other.
+    Nothing is removed from the canonical ledger.
+    """
+
+    broad_parts = _gap_action_parts(
+        broader
+    )
+    narrow_parts = _gap_action_parts(
+        narrower
+    )
+
+    if (
+        broad_parts is None
+        or narrow_parts is None
+    ):
+        return False
+
+    (
+        broad_subject,
+        broad_predicate,
+        _broad_tokens,
+    ) = broad_parts
+
+    (
+        narrow_subject,
+        narrow_predicate,
+        _narrow_tokens,
+    ) = narrow_parts
+
+    if (
+        broad_subject.casefold()
+        != narrow_subject.casefold()
+    ):
+        return False
+
+    if not _gap_predicates_match(
+        broad_predicate,
+        narrow_predicate,
+    ):
+        return False
+
+    broad_words = _gap_content_words(
+        broader
+    )
+    narrow_words = _gap_content_words(
+        narrower
+    )
+
+    if not narrow_words:
+        return bool(
+            broad_words
+        )
+
+    if broad_words == narrow_words:
+        # Equivalent content, not strictly broader.
+        return False
+
+    return (
+        narrow_words
+        <= broad_words
+    )
+
+
+def _compact_gap_existing_payloads(
+    payloads: list[str],
+) -> list[str]:
+    """
+    Prompt-only compaction for GAP EXISTING EV context.
+
+    Preserve original order among survivors.
+    Remove only records strictly subsumed by another record in the
+    same paragraph.
+
+    The append-only ledger remains untouched.
+    """
+
+    result = []
+
+    for i, payload in enumerate(
+        payloads
+    ):
+        subsumed = False
+
+        for j, other in enumerate(
+            payloads
+        ):
+            if i == j:
+                continue
+
+            if _gap_existing_payload_subsumes(
+                other,
+                payload,
+            ):
+                subsumed = True
+                break
+
+        if not subsumed:
+            result.append(
+                payload
+            )
+
+    return result
+
+
+def _gap_existing_by_local(
+    parsed: Parsed | None,
+):
+    result = {}
+
+    if parsed is None:
+        return result
+
+    for record in parsed.records:
+        if record.tag != 'EV':
+            continue
+
+        for local_no in record.spans:
+            result.setdefault(
+                local_no,
+                [],
+            ).append(
+                record.payload
+            )
+
+    return result
+
+
+def _sanitize_action_gap(
+    parsed: Parsed,
+    source_by_local_no: dict[int, str],
+    existing: Parsed | None,
+) -> Parsed:
+    existing_map = (
+        _gap_existing_by_local(
+            existing
+        )
+    )
+
+    records = []
+
+    surface_repaired = 0
+    already_covered = 0
+    unsupported_role = 0
+    shape_dropped = 0
+
+    for record in parsed.records:
+        if record.tag != 'EV':
+            continue
+
+        if len(record.spans) != 1:
+            shape_dropped += 1
+            continue
+
+        local_no = record.spans[0]
+
+        source = source_by_local_no.get(
+            local_no,
+            '',
+        )
+
+        payload = record.payload.strip()
+
+        (
+            repaired,
+            changed,
+        ) = _repair_gap_coordinated_surface_subject(
+            payload,
+            source,
+        )
+
+        if changed:
+            payload = repaired
+            surface_repaired += 1
+
+        if _gap_action_parts(
+            payload
+        ) is None:
+            shape_dropped += 1
+            continue
+
+        existing_payloads = (
+            existing_map.get(
+                local_no,
+                [],
+            )
+        )
+
+        if _gap_candidate_already_covered(
+            payload,
+            existing_payloads,
+        ):
+            already_covered += 1
+            continue
+
+        if not _gap_source_role_supported(
+            payload,
+            source,
+        ):
+            unsupported_role += 1
+            continue
+
+        records.append(
+            Record(
+                tag='EV',
+                payload=payload,
+                spans=list(record.spans),
+                epistemic=record.epistemic,
+                raw=record.raw,
+            )
+        )
+
+    stats = dict(parsed.stats)
+
+    stats['parsed'] = len(records)
+    stats['content_count'] = len(records)
+    stats['gap_surface_subject_repaired'] = (
+        surface_repaired
+    )
+    stats['gap_already_covered'] = (
+        already_covered
+    )
+    stats['gap_unsupported_role'] = (
+        unsupported_role
+    )
+    stats['gap_shape_dropped'] = (
+        shape_dropped
+    )
+
+    return Parsed(
+        records=records,
+        ignored=list(parsed.ignored),
+        quarantined=list(parsed.quarantined),
+        stats=stats,
+        contract_pass=parsed.contract_pass,
+    )
+
+
+def _action_gap_batches(
+    targets,
+    batch_size: int = 2,
+):
+    substantive = [
+        target
+        for target in targets
+        if (
+            target.get('text', '').strip()
+            and not _is_structural_paragraph(
+                target.get('text', '')
+            )
+        )
+    ]
+
+    return [
+        substantive[
+            i:i + batch_size
+        ]
+        for i in range(
+            0,
+            len(substantive),
+            batch_size,
+        )
+    ]
+
+
+def _build_action_gap_messages(
+    targets,
+    existing: Parsed | None,
+):
+    existing_map = (
+        _gap_existing_by_local(
+            existing
+        )
+    )
+
+    source_fragment = '\n\n'.join(
+        (
+            f"[P{x['local_no']:02}] "
+            f"{x['text']}"
+        )
+        for x in targets
+    )
+
+    existing_blocks = []
+
+    for target in targets:
+        local_no = target[
+            'local_no'
+        ]
+
+        payloads = _compact_gap_existing_payloads(
+            existing_map.get(
+                local_no,
+                [],
+            )
+        )
+
+        body = (
+            '\n'.join(
+                (
+                    f"EV: {payload} "
+                    f"@P{local_no:02}"
+                )
+                for payload in payloads
+            )
+            if payloads
+            else '(none)'
+        )
+
+        existing_blocks.append(
+            (
+                f"[P{local_no:02}]\n"
+                + body
+            )
+        )
+
+    return [
+        {
+            'role': 'system',
+            'content': ACTION_GAP_SYSTEM,
+        },
+        {
+            'role': 'user',
+            'content': (
+                "Audit each SOURCE paragraph against "
+                "its EXISTING EV records.\n"
+                "Return ONLY missing explicit actions. "
+                "Do not repeat represented actions.\n\n"
+                "SOURCE:\n"
+                + source_fragment
+                + "\n\n"
+                "EXISTING EV BY PARAGRAPH:\n"
+                + '\n\n'.join(
+                    existing_blocks
+                )
+            ),
+        },
+    ]
+
+
+def _sanitize_action_coverage(
+    parsed: Parsed,
+    source_by_local_no: dict[int, str],
+    existing: Parsed | None = None,
+) -> Parsed:
+    """Precision filter for the independent action pass."""
+
+    existing_roles = _existing_action_roles(
+        existing,
+    )
+
+    records = []
+    speech_ev_dropped = 0
+    hedge_trimmed = 0
+    role_conflict_dropped = 0
+    surface_subject_repaired = 0
+    reported_speech_ev_dropped = 0
+    hedged_ev_dropped = 0
+    literal_complement_extended = 0
+    positive_subject_bridged = 0
+    positive_object_bridged = 0
+    coordinated_tail_extended = 0
+
+    for record in parsed.records:
+        if record.tag != 'EV':
+            records.append(record)
+            continue
+
+        payload = record.payload.strip()
+
+        # Precision-first de-canonicalization:
+        # if the model replaced a literal source pronoun with a
+        # named actor, restore only the source-surface subject.
+        #
+        # Restrict to one paragraph. Multi-span records are not
+        # safe for this literal alignment repair.
+        if (
+            record.tag == 'EV'
+            and len(record.spans) == 1
+        ):
+            local_no = record.spans[0]
+
+            source = source_by_local_no.get(
+                local_no,
+                '',
+            )
+
+            (
+                repaired_payload,
+                subject_changed,
+            ) = _repair_action_surface_subject(
+                payload,
+                source,
+            )
+
+            if subject_changed:
+                payload = repaired_payload
+                surface_subject_repaired += 1
+
+            (
+                bridged_payload,
+                subject_bridged,
+                _bridge_reason,
+            ) = _bridge_action_surface_subject(
+                payload,
+                source,
+            )
+
+            if subject_bridged:
+                payload = bridged_payload
+                positive_subject_bridged += 1
+
+
+        parsed_action = _action_subject_tail(
+            payload,
+        )
+
+        if parsed_action is not None:
+            subject, tail = parsed_action
+
+            existing_subjects = existing_roles.get(
+                (
+                    tuple(record.spans),
+                    tail,
+                ),
+                set(),
+            )
+
+            if (
+                existing_subjects
+                and subject not in existing_subjects
+            ):
+                role_conflict_dropped += 1
+                continue
+
+        # Speech belongs to SAY in the main extraction.
+        if _COVERAGE_SPEECH_ACT_RE.search(payload):
+            speech_ev_dropped += 1
+            continue
+
+        source = ' '.join(
+            source_by_local_no.get(span_no, '')
+            for span_no in record.spans
+        )
+
+        # Source-aware communication firewall. This catches
+        # reported/indirect speech which ACTION-COVERAGE emitted
+        # as EV while preserving ordinary non-communicative uses
+        # of ambiguous predicates such as "claimed the prize".
+        if _coverage_ev_is_reported_speech(
+            payload,
+            source,
+        ):
+            reported_speech_ev_dropped += 1
+            continue
+
+        # Source-local epistemic firewall. Only a candidate whose
+        # own predicate aligns with a literal seemed/appeared-to
+        # proposition is removed.
+        if _coverage_ev_is_hedged_proposition(
+            payload,
+            source,
+        ):
+            hedged_ev_dropped += 1
+            continue
+
+        local_no = (
+            record.spans[0]
+            if len(record.spans) == 1
+            else None
+        )
+
+        (
+            object_payload,
+            object_changed,
+            _object_bridge_reason,
+        ) = _bridge_action_object_reference(
+            payload,
+            source,
+            local_no,
+            existing,
+        )
+
+        if object_changed:
+            payload = object_payload
+            positive_object_bridged += 1
+
+        # Strongest evidence first: if the complete canonical EV
+        # still matches SOURCE literally, v0.1.20c owns the repair.
+        (
+            extended_payload,
+            complement_changed,
+        ) = _extend_action_literal_complement(
+            payload,
+            source,
+        )
+
+        if complement_changed:
+            payload = extended_payload
+            literal_complement_extended += 1
+
+        # Fallback for coordinated clauses where earlier subject /
+        # object canonicalization makes a complete literal match
+        # impossible, but verb + trailing source surface remains
+        # uniquely identifiable.
+        (
+            coordinated_payload,
+            coordinated_changed,
+        ) = _extend_action_coordinated_tail_complement(
+            payload,
+            source,
+        )
+
+        if coordinated_changed:
+            payload = coordinated_payload
+            coordinated_tail_extended += 1
+
+        if _SOURCE_HEDGE_RE.search(source):
+            trimmed = _HEDGE_LEAK_TAIL_RE.sub(
+                '',
+                payload,
+            ).strip(' ,;:-')
+
+            if trimmed and trimmed != payload:
+                payload = trimmed
+                hedge_trimmed += 1
+
+        records.append(
+            Record(
+                tag=record.tag,
+                payload=payload,
+                spans=list(record.spans),
+                epistemic=record.epistemic,
+                raw=record.raw,
+            )
+        )
+
+    stats = dict(parsed.stats)
+    stats['parsed'] = len(records)
+    stats['content_count'] = len(records)
+    stats['speech_ev_dropped'] = speech_ev_dropped
+    stats['hedge_trimmed'] = hedge_trimmed
+    stats['role_conflict_dropped'] = role_conflict_dropped
+    stats['surface_subject_repaired'] = surface_subject_repaired
+    stats['reported_speech_ev_dropped'] = reported_speech_ev_dropped
+    stats['hedged_ev_dropped'] = hedged_ev_dropped
+    stats['literal_complement_extended'] = literal_complement_extended
+    stats['positive_subject_bridged'] = positive_subject_bridged
+    stats['positive_object_bridged'] = positive_object_bridged
+    stats['coordinated_tail_extended'] = coordinated_tail_extended
+
+    return Parsed(
+        records=records,
+        ignored=list(parsed.ignored),
+        quarantined=list(parsed.quarantined),
+        stats=stats,
+        contract_pass=parsed.contract_pass,
+    )
+
+
+def _build_action_coverage_messages(targets):
+    fragment = '\n\n'.join(
+        f"[P{x['local_no']:02}] {x['text']}"
+        for x in targets
+    )
+
+    return [
+        {
+            'role': 'system',
+            'content': ACTION_COVERAGE_SYSTEM,
+        },
+        {
+            'role': 'user',
+            'content': (
+                "Extract explicit material actions from ONLY these paragraphs.\n\n"
+                + fragment
+            ),
+        },
+    ]
+
+
+
+# Conservative paragraph-selection cues for the dedicated SAY pass.
+#
+# This is deliberately narrower than _INDIRECT_COMM_FORMS.
+# The verifier ontology may contain semantically valid verbs such as
+# "demand", but feeding every prose use of "demands" to the LLM
+# increases narration-as-SAY noise.
+_SAY_SELECTOR_COMM_RE = re.compile(
+    r'\b(?:'
+    r'say|says|said|'
+    r'ask|asks|asked|'
+    r'reply|replies|replied|'
+    r'answer|answers|answered|'
+    r'add|adds|added|'
+    r'whisper|whispers|whispered|'
+    r'shout|shouts|shouted|'
+    r'call|calls|called|'
+    r'tell|tells|told|'
+    r'remark|remarked|'
+    r'report|reports|reported|'
+    r'phone|phones|phoned|'
+    r'radio|radios|radioed|'
+    r'announce|announces|announced|'
+    r'warn|warns|warned|'
+    r'explain|explains|explained|'
+    r'claim|claims|claimed|'
+    r'murmur|murmurs|murmured|'
+    r'cry|cries|cried|'
+    r'exclaim|exclaims|exclaimed|'
+    r'request|requests|requested|'
+    r'order|orders|ordered|'
+    r'command|commands|commanded|'
+    r'declare|declares|declared|'
+    r'respond|responds|responded|'
+    r'protest|protests|protested|'
+    r'insist|insists|insisted|'
+    r'urge|urges|urged'
+    r')\b',
+    re.I,
+)
+
+
+# Strong cross-paragraph direct-speech lead-in:
+#
+#   Sir John began--
+#   "Irene, ..."
+#
+# We do NOT use this regex to infer a speaker. It merely keeps the
+# paragraph available to the later candidate-conditioned verifier.
+_SAY_SELECTOR_LEADIN_RE = re.compile(
+    r'\b(?:'
+    r'began|continued|started|'
+    r'replied|answered|said|remarked|declared'
+    r')\b'
+    r'[^.!?]{0,80}'
+    r'(?::|--|—|-)\s*$',
+    re.I,
+)
+
+
+def _select_say_coverage_rows(rows):
+    """
+    Select paragraphs that contain positive surface evidence that
+    speech may be present.
+
+    The old selector sent every prose paragraph to the SAY pass.
+    On long real-book segments this encouraged the local model to
+    reinterpret narration as speech.
+
+    Keep a paragraph when it contains:
+    - direct quotation punctuation; or
+    - an explicit communication predicate usable by the
+      indirect-speech verifier.
+
+    Precision is still decided later by the source-aware SAY
+    sanitizer. This selector only reduces generative attack
+    surface.
+    """
+
+    targets = []
+
+    for row in rows:
+        local_no = int(row['local_no'])
+        text = (row['text'] or '').strip()
+        tok_len = int(row['tok_len'])
+
+        if _is_structural_paragraph(text):
+            continue
+
+        if not text or tok_len <= 0:
+            continue
+
+        has_direct_quote = bool(
+            re.search(
+                r'["“”]',
+                text,
+            )
+        )
+
+        has_communication_cue = bool(
+            _SAY_SELECTOR_COMM_RE.search(
+                text
+            )
+        )
+
+        has_speech_leadin = bool(
+            _SAY_SELECTOR_LEADIN_RE.search(
+                text
+            )
+        )
+
+        if not (
+            has_direct_quote
+            or has_communication_cue
+            or has_speech_leadin
+        ):
+            continue
+
+        targets.append({
+            'local_no': local_no,
+            'tok_len': tok_len,
+            'text': text,
+        })
+
+    return targets
+
+
+def _say_segment_source_rows(
+    con,
+    seg_id: str,
+):
+    """
+    Complete ordered SOURCE for deterministic SAY verification.
+
+    This is intentionally broader than the rows sent to the local
+    model. Generation uses only SAY-relevant targets; attribution
+    verification may inspect every paragraph in the segment.
+
+    Selector decisions are an inference-cost optimization, not an
+    epistemic boundary.
+    """
+
+    return con.execute(
+        """
+        SELECT ss.local_no, s.tok_len, s.text
+        FROM segment_spans ss
+        JOIN spans s ON s.id=ss.span_id
+        WHERE ss.seg_id=?
+        ORDER BY ss.local_no
+        """,
+        (seg_id,),
+    ).fetchall()
+
+
+def _say_coverage_targets(
+    con,
+    seg_id: str,
+):
+    return _select_say_coverage_rows(
+        _say_segment_source_rows(
+            con,
+            seg_id,
+        )
+    )
+
+
+
+_SAY_TRAILING_REF_RE = re.compile(
+    r'\s+'
+    r'(?:@P?\d{1,3}'
+    r'(?:\s*-\s*(?:@P?)?\d{1,3})?'
+    r')'
+    r'(?:'
+    r'\s*,\s*'
+    r'@P?\d{1,3}'
+    r'(?:\s*-\s*(?:@P?)?\d{1,3})?'
+    r')*'
+    r'\s*$',
+    re.I,
+)
+
+
+def _say_provenance_surface(
+    text: str,
+) -> str:
+    """
+    Conservative surface normalization for provenance matching.
+
+    This is NOT semantic matching.
+
+    Allowed normalization:
+    - trim outer whitespace;
+    - collapse whitespace runs;
+    - normalize typographic quote/apostrophe glyphs;
+    - remove one balanced pair of outer double quotes.
+
+    We deliberately do not:
+    - paraphrase;
+    - stem;
+    - reorder words;
+    - drop arbitrary punctuation;
+    - use fuzzy similarity.
+    """
+
+    text = str(
+        text
+    ).strip()
+
+    text = (
+        text
+        .replace('“', '"')
+        .replace('”', '"')
+        .replace('’', "'")
+        .replace('‘', "'")
+    )
+
+    text = re.sub(
+        r'\s+',
+        ' ',
+        text,
+    ).strip()
+
+    if (
+        len(text) >= 2
+        and text.startswith('"')
+        and text.endswith('"')
+    ):
+        text = text[
+            1:-1
+        ].strip()
+
+    return text.casefold()
+
+
+def _repair_say_missing_provenance(
+    raw: str,
+    source_by_local_no: dict[int, str],
+) -> tuple[str, int]:
+    """
+    Add @Pxx ONLY to an otherwise strict SAY line when its spoken
+    content identifies exactly one source paragraph.
+
+    Preconditions for repair:
+    - line starts with SAY:
+    - line has NO existing trailing provenance block;
+    - payload has exactly one `|`;
+    - speaker surface passes the existing precision firewall;
+    - normalized spoken content is a literal substring of exactly
+      one normalized source paragraph.
+
+    Ambiguous or unsupported lines are returned unchanged and will
+    be quarantined normally by parse_output().
+
+    This function never changes:
+    - speaker identity;
+    - spoken content;
+    - an existing provenance reference.
+    """
+
+    if not raw:
+        return raw, 0
+
+    completed = 0
+    output_lines = []
+
+    for line in raw.splitlines():
+        stripped = line.strip()
+
+        if not stripped:
+            output_lines.append(
+                line
+            )
+            continue
+
+        tag_match = re.match(
+            r'^\s*SAY\s*:\s*(.+?)\s*$',
+            line,
+            re.I,
+        )
+
+        if tag_match is None:
+            output_lines.append(
+                line
+            )
+            continue
+
+        # Existing provenance, even if later found invalid by the
+        # parser, is model-supplied evidence. Do not overwrite it.
+        if _SAY_TRAILING_REF_RE.search(
+            line
+        ):
+            output_lines.append(
+                line
+            )
+            continue
+
+        payload = tag_match.group(
+            1
+        ).strip()
+
+        # Respect the strict SAY grammar. Provenance repair must not
+        # become a payload-shape repair.
+        if payload.count('|') != 1:
+            output_lines.append(
+                line
+            )
+            continue
+
+        speaker, content = [
+            part.strip()
+            for part in payload.split(
+                '|',
+                1,
+            )
+        ]
+
+        if not speaker or not content:
+            output_lines.append(
+                line
+            )
+            continue
+
+        probe_record = Record(
+            tag='SAY',
+            payload=(
+                f'{speaker} | {content}'
+            ),
+            spans=[],
+            epistemic='EXPLICIT',
+            raw=line,
+        )
+
+        # Provenance completion establishes WHERE the spoken
+        # content came from, not WHO actually spoke it.
+        #
+        # Therefore enforce only structural speaker shape here.
+        # Passing an empty source map deliberately disables the
+        # source-presence part of the d1a speaker firewall while
+        # still rejecting pronouns / clauses / malformed fields.
+        #
+        # Example:
+        #
+        #   SAY: Silas | literal P16 content
+        #
+        # may receive @P16 here, but d1a will later reject Silas
+        # because that proposed speaker is absent from source.
+        if not _say_speaker_surface_valid(
+            probe_record,
+            {},
+        ):
+            output_lines.append(
+                line
+            )
+            continue
+
+        wanted = _say_provenance_surface(
+            content
+        )
+
+        if not wanted:
+            output_lines.append(
+                line
+            )
+            continue
+
+        matches = []
+
+        for local_no, source in (
+            source_by_local_no.items()
+        ):
+            available = (
+                _say_provenance_surface(
+                    source
+                )
+            )
+
+            if wanted in available:
+                matches.append(
+                    int(local_no)
+                )
+
+        # Provenance completion is allowed only under uniqueness.
+        if len(matches) != 1:
+            output_lines.append(
+                line
+            )
+            continue
+
+        local_no = matches[0]
+
+        output_lines.append(
+            f'{line.rstrip()} '
+            f'@P{local_no:02}'
+        )
+
+        completed += 1
+
+    return (
+        '\n'.join(
+            output_lines
+        ),
+        completed,
+    )
+
+
+def _say_coverage_batches(
+    targets,
+    batch_size: int = 3,
+    overlap: int = 1,
+):
+    """
+    Split SAY extraction into small contiguous source windows.
+
+    Why:
+    - long dialogue-heavy segments can make a small local model
+      lose the strict `speaker | content @Pxx` output grammar;
+    - source verification happens only AFTER all batches are merged,
+      so batching changes generation topology, not truth criteria.
+
+    Rules:
+    - never bridge a gap in paragraph numbering;
+    - use a one-paragraph overlap by default to preserve local
+      dialogue continuity;
+    - every target is covered at least once.
+    """
+
+    if not targets:
+        return []
+
+    if batch_size < 1:
+        raise ValueError(
+            "batch_size must be >= 1"
+        )
+
+    if overlap < 0:
+        raise ValueError(
+            "overlap must be >= 0"
+        )
+
+    if overlap >= batch_size:
+        raise ValueError(
+            "overlap must be smaller than batch_size"
+        )
+
+    groups = []
+    current = []
+
+    for target in targets:
+        if (
+            current
+            and int(target['local_no'])
+            != int(current[-1]['local_no']) + 1
+        ):
+            groups.append(
+                current
+            )
+            current = []
+
+        current.append(
+            target
+        )
+
+    if current:
+        groups.append(
+            current
+        )
+
+    batches = []
+
+    for group in groups:
+        start = 0
+
+        while start < len(group):
+            end = min(
+                len(group),
+                start + batch_size,
+            )
+
+            batches.append(
+                group[start:end]
+            )
+
+            if end >= len(group):
+                break
+
+            start = (
+                end - overlap
+            )
+
+    return batches
+
+
+def _build_say_coverage_messages(targets):
+    fragment = '\n\n'.join(
+        f"[P{x['local_no']:02}] {x['text']}"
+        for x in targets
+    )
+
+    return [
+        {
+            'role': 'system',
+            'content': SAY_COVERAGE_SYSTEM,
+        },
+        {
+            'role': 'user',
+            'content': (
+                "Extract ONLY speech actually spoken aloud "
+                "from these paragraphs.\n\n"
+                + fragment
+            ),
+        },
+    ]
+
+
+_SAY_VERBS = (
+    'said|asked|replied|answered|added|'
+    'whispered|shouted|called|told|remarked|'
+    'murmured|cried|exclaimed|continued|'
+    'requested|ordered|commanded|declared|'
+    'responded|protested|insisted|urged|demanded'
+)
+
+
+# Verbs that can syntactically introduce an explicit quotation.
+#
+# Keep this separate from _SAY_VERBS because some of these
+# (for example "started") are safe only in the strong
+# speaker + verb + adjacent-quote attribution pattern.
+_DIRECT_ATTRIBUTION_VERBS = (
+    _SAY_VERBS
+    + '|started|began|interrupted'
+)
+
+_DOCUMENT_CUE_RE = re.compile(
+    r'\b(?:'
+    r'note|letter|report|receipt|sign|label|'
+    r'message|inscription|document|sheet|'
+    r'map|display|screen|terminal'
+    r')\b'
+    r'|'
+    r'\b(?:written|wrote|printed|typed)\b',
+    re.I,
+)
+
+
+
+# Finite communication predicates used only to establish positive
+# SAY evidence for indirect/reported speech.
+#
+# This is an ontology-level lexical class, not an action extractor:
+# ordinary narrative verbs never belong here.
+_INDIRECT_COMM_FORMS = (
+    'say|says|said|'
+    'ask|asks|asked|'
+    'reply|replies|replied|'
+    'answer|answers|answered|'
+    'add|adds|added|'
+    'whisper|whispers|whispered|'
+    'shout|shouts|shouted|'
+    'call|calls|called|'
+    'tell|tells|told|'
+    'remark|remarks|remarked|'
+    'report|reports|reported|'
+    'phone|phones|phoned|'
+    'radio|radios|radioed|'
+    'announce|announces|announced|'
+    'warn|warns|warned|'
+    'explain|explains|explained|'
+    'claim|claims|claimed|claiming|'
+    'murmur|murmurs|murmured|'
+    'cry|cries|cried|'
+    'exclaim|exclaims|exclaimed|'
+    'continue|continues|continued|'
+    'request|requests|requested|'
+    'order|orders|ordered|'
+    'command|commands|commanded|'
+    'declare|declares|declared|'
+    'respond|responds|responded|'
+    'protest|protests|protested|'
+    'insist|insists|insisted|'
+    'urge|urges|urged|'
+    'demand|demands|demanded'
+)
+
+_INDIRECT_COMM_RE = re.compile(
+    rf'\b(?:{_INDIRECT_COMM_FORMS})\b',
+    re.I,
+)
+
+_INDIRECT_NEGATION_RE = re.compile(
+    r'\b(?:'
+    r'not|never|'
+    r'did\s+not|does\s+not|do\s+not|'
+    r"didn't|doesn't|don't|"
+    r'refused\s+to|declined\s+to|'
+    r'without'
+    r')\b',
+    re.I,
+)
+
+_INDIRECT_CONTENT_STOP = {
+    'the',
+    'and',
+    'but',
+    'that',
+    'this',
+    'his',
+    'her',
+    'their',
+    'she',
+    'he',
+    'they',
+}
+
+
+
+def _say_position_inside_direct_quote(
+    text: str,
+    pos: int,
+) -> bool:
+    """
+    Return True when pos lies inside ordinary double-quoted speech.
+
+    Used as a structural firewall for attribution evidence.
+
+    Example:
+
+        "Sir and husband," she said, "..."
+
+         ^^^^^^^^^^^^^^^
+         this phrase is a vocative inside speech, not the speaker
+         subject of "said".
+
+    Both straight and typographic double quotes count as quote
+    delimiters. This is deliberately not a full quotation parser.
+    """
+
+    if pos < 0:
+        return False
+
+    quote_count = len(
+        re.findall(
+            r'["“”]',
+            text[:pos],
+        )
+    )
+
+    return (
+        quote_count % 2
+        == 1
+    )
+
+
+def _say_words(text: str):
+    return re.findall(
+        r"[A-Za-z0-9'-]+",
+        text.casefold(),
+    )
+
+
+def _say_sentence_chunks(text: str):
+    return [
+        chunk.strip()
+        for chunk in re.split(
+            r'(?<=[.!?])["”’]?\s+',
+            text,
+        )
+        if chunk.strip()
+    ]
+
+
+def _say_proposition_tokens(content: str):
+    tokens = []
+
+    for token in _say_words(content):
+        if len(token) < 3:
+            continue
+
+        if token in _INDIRECT_CONTENT_STOP:
+            continue
+
+        if _INDIRECT_COMM_RE.fullmatch(token):
+            continue
+
+        tokens.append(token)
+
+    return tokens
+
+
+
+def _source_supports_indirect_speech(
+    source: str,
+    speaker: str,
+    content: str,
+) -> bool:
+    """
+    Conservative positive evidence for reported communication.
+
+    Supported examples:
+
+        Selene asked what happened.
+
+        Selene entered the operations bay
+        and asked what happened.
+
+        Mira quietly warned Jonas
+        that the bridge was unsafe.
+
+        Sol phoned the caretaker
+        to report a loose antenna cable.
+
+    Rejected examples:
+
+        Rachel, after receiving orders ...
+        ^ "orders" is not a finite communication predicate
+          governed by Rachel here.
+
+        Sir John ... he ordered the key ...
+                     ^^ new explicit subject
+
+        Priya's note said ...
+        ^ possessive/document relation.
+
+    This is deliberately a small grammatical verifier, not
+    general semantic-role parsing.
+    """
+
+    wanted = _say_proposition_tokens(
+        content
+    )
+
+    if not wanted:
+        return False
+
+    speaker_re = re.compile(
+        rf'\b{re.escape(speaker)}\b',
+        re.I,
+    )
+
+    subject_pronoun_re = re.compile(
+        r'\b(?:i|we|you|he|she|they)\b',
+        re.I,
+    )
+
+    # Direct subject -> communication predicate:
+    #
+    #   Selene asked ...
+    #   Mira quietly warned ...
+    #
+    direct_prefix_re = re.compile(
+        r'^\s*'
+        r'(?:,\s*)?'
+        r'(?:(?:then|also|again|now)\s+'
+        r"|[A-Za-z'-]+ly\s+){0,3}"
+        r'$',
+        re.I,
+    )
+
+    # Same subject performs some earlier action and then
+    # communicates:
+    #
+    #   Selene entered the bay and asked ...
+    #
+    # The important invariant is that the text immediately before
+    # the communication predicate ends in a coordinator, with no
+    # intervening explicit new subject pronoun.
+    coordinated_tail_re = re.compile(
+        r'\b(?:and|then)\s*'
+        r'(?:(?:then|also|again|now)\s+'
+        r"|[A-Za-z'-]+ly\s+){0,3}"
+        r'$',
+        re.I,
+    )
+
+    for sentence in _say_sentence_chunks(
+        source
+    ):
+        for speaker_match in speaker_re.finditer(
+            sentence
+        ):
+            if _say_position_inside_direct_quote(
+                sentence,
+                speaker_match.start(),
+            ):
+                continue
+
+            after_speaker = sentence[
+                speaker_match.end():
+            ]
+
+            # Priya's note said ...
+            if re.match(
+                r"\s*['’]s\b",
+                after_speaker,
+                re.I,
+            ):
+                continue
+
+            for comm_match in _INDIRECT_COMM_RE.finditer(
+                after_speaker
+            ):
+                before_comm = after_speaker[
+                    :comm_match.start()
+                ]
+
+                # A new explicit grammatical subject appeared
+                # before the communication predicate.
+                #
+                #   Sir John ... he ordered ...
+                if subject_pronoun_re.search(
+                    before_comm
+                ):
+                    continue
+
+                # Negated/refused communication does not count.
+                if _INDIRECT_NEGATION_RE.search(
+                    before_comm[-100:]
+                ):
+                    continue
+
+                direct_actor = bool(
+                    direct_prefix_re.fullmatch(
+                        before_comm
+                    )
+                )
+
+                coordinated_actor = bool(
+                    coordinated_tail_re.search(
+                        before_comm
+                    )
+                )
+
+                if not (
+                    direct_actor
+                    or coordinated_actor
+                ):
+                    continue
+
+                proposition_source = (
+                    after_speaker[
+                        comm_match.end():
+                    ]
+                )
+
+                available = set(
+                    _say_words(
+                        proposition_source
+                    )
+                )
+
+                overlap = sum(
+                    token in available
+                    for token in wanted
+                )
+
+                if (
+                    overlap >= 1
+                    and overlap / len(wanted) >= 0.5
+                ):
+                    return True
+
+    return False
+
+def _say_parts(record: Record):
+    if record.tag != 'SAY':
+        return None
+
+    if '|' not in record.payload:
+        return None
+
+    speaker, content = record.payload.split('|', 1)
+
+    speaker = speaker.strip()
+    content = content.strip().strip(
+        ' \t\r\n"\'“”‘’'
+    )
+
+    if not speaker or not content:
+        return None
+
+    return speaker, content
+
+
+
+_SAY_INVALID_SPEAKER_PRONOUNS = {
+    'i',
+    'me',
+    'we',
+    'us',
+    'you',
+    'he',
+    'him',
+    'she',
+    'her',
+    'they',
+    'them',
+    'it',
+    'someone',
+    'somebody',
+}
+
+
+
+def _say_speaker_surface_valid(
+    record: Record,
+    source_by_local_no: dict[int, str],
+) -> bool:
+    """
+    Precision firewall for SAY speaker identity.
+
+    Always reject structurally invalid speaker surfaces:
+    - pronouns: he / she / I;
+    - pronoun-led phrases: "he requested";
+    - long clauses / field-confusion;
+    - dialogue punctuation in the speaker field.
+
+    When source material is available, additionally require the
+    proposed explicit speaker surface to occur literally somewhere
+    in that source.
+
+    When source material is NOT supplied, do not invent negative
+    evidence. Older sanitizer/conflict tests intentionally exercise
+    structural behavior without source context.
+    """
+
+    parts = _say_parts(
+        record
+    )
+
+    if parts is None:
+        return False
+
+    speaker, _content = parts
+
+    speaker = speaker.strip()
+
+    if not speaker:
+        return False
+
+    words = re.findall(
+        r"[A-Za-z][A-Za-z'-]*",
+        speaker,
+    )
+
+    if not words:
+        return False
+
+    if (
+        words[0].casefold()
+        in _SAY_INVALID_SPEAKER_PRONOUNS
+    ):
+        return False
+
+    if len(words) > 5:
+        return False
+
+    if re.search(
+        r'[,;:!?|"“”]',
+        speaker,
+    ):
+        return False
+
+    # No source was supplied. We can validate shape, but absence
+    # from an empty source is not evidence that the name was
+    # hallucinated.
+    if not source_by_local_no:
+        return True
+
+    source = ' '.join(
+        source_by_local_no.get(
+            local_no,
+            '',
+        )
+        for local_no in sorted(
+            source_by_local_no
+        )
+    )
+
+    # A non-empty source map containing only empty strings is still
+    # not useful negative evidence.
+    if not source.strip():
+        return True
+
+    return (
+        re.search(
+            rf'(?<![A-Za-z0-9_])'
+            rf'{re.escape(speaker)}'
+            rf'(?![A-Za-z0-9_])',
+            source,
+            re.I,
+        )
+        is not None
+    )
+
+def _say_content_bounds(
+    source: str,
+    content: str,
+):
+    """Locate extracted utterance literally in source."""
+
+    source_fold = source.casefold()
+    content_fold = content.casefold().strip()
+
+    if not content_fold:
+        return None
+
+    start = source_fold.find(content_fold)
+
+    if start < 0:
+        return None
+
+    return start, start + len(content)
+
+
+
+_DIRECT_ATTRIBUTION_PRONOUN_RE = (
+    r'(?:he|she|they)'
+)
+
+_DIRECT_ATTRIBUTION_NAME_RE = re.compile(
+    r"\b[A-Z][a-zA-Z'-]+\b"
+)
+
+# Capitalized grammatical/discourse words which can occur at
+# sentence start but are not useful person-name evidence.
+_DIRECT_ATTRIBUTION_NON_NAMES = {
+    'A',
+    'An',
+    'At',
+    'After',
+    'Before',
+    'Later',
+    'On',
+    'The',
+    'Then',
+    'When',
+    'While',
+}
+
+
+def _direct_attribution_names(
+    text: str,
+) -> list[str]:
+    return [
+        token
+        for token in _DIRECT_ATTRIBUTION_NAME_RE.findall(
+            text
+        )
+        if token not in _DIRECT_ATTRIBUTION_NON_NAMES
+    ]
+
+
+def _direct_attribution_current_sentence(
+    text: str,
+) -> str:
+    text = text.rstrip()
+
+    if not text:
+        return ''
+
+    cut = max(
+        text.rfind('.'),
+        text.rfind('!'),
+        text.rfind('?'),
+    )
+
+    if cut < 0:
+        return text
+
+    return text[cut + 1:]
+
+
+def _direct_attribution_previous_sentence(
+    text: str,
+) -> str:
+    text = text.rstrip()
+
+    if not text:
+        return ''
+
+    last = max(
+        text.rfind('.'),
+        text.rfind('!'),
+        text.rfind('?'),
+    )
+
+    if last < 0:
+        return ''
+
+    prefix = text[:last].rstrip()
+
+    previous = max(
+        prefix.rfind('.'),
+        prefix.rfind('!'),
+        prefix.rfind('?'),
+    )
+
+    return prefix[previous + 1:]
+
+
+def _source_supports_pronoun_attributed_speaker(
+    source: str,
+    speaker: str,
+    bounds,
+) -> bool:
+    """
+    Positive-evidence bridge for direct speech whose local
+    attribution uses a pronoun rather than the candidate name.
+
+    This deliberately does NOT perform general coreference.
+
+    Supported forms:
+
+      Nadia placed ...
+      "...", she told Olek.
+
+    when Nadia is the only named participant in the anchoring
+    sentence before the quote.
+
+    And:
+
+      Olek met Petro.
+      He handed Petro ... and said, "..."
+
+    when the previous sentence contains exactly two named
+    participants, the candidate is one of them, and the other
+    participant is explicitly named inside the pronoun-subject
+    attribution clause.
+
+    Any ambiguity causes abstention.
+    """
+
+    if bounds is None:
+        return False
+
+    start, end = bounds
+
+    punctuation = r"[\s,;:!?\"'“”‘’\-–—]*"
+
+    # --------------------------------------------------------
+    # Quote first, pronoun attribution after:
+    #
+    #   Nadia placed the key ...
+    #   "...", she told Olek.
+    #
+    # Require the sentence immediately before the quote to
+    # contain exactly one named participant, the candidate.
+    # --------------------------------------------------------
+    after = source[end:end + 120]
+
+    if re.search(
+        rf'^{punctuation}'
+        rf'{_DIRECT_ATTRIBUTION_PRONOUN_RE}\s+'
+        rf'(?:{_DIRECT_ATTRIBUTION_VERBS})\b',
+        after,
+        re.I,
+    ):
+        before_quote = source[:start]
+
+        prior = (
+            _direct_attribution_previous_sentence(
+                before_quote
+            )
+        )
+
+        if not prior:
+            prior = before_quote
+
+        names = _direct_attribution_names(
+            prior
+        )
+
+        if names == [speaker]:
+            return True
+
+    # --------------------------------------------------------
+    # Pronoun subject before the quote:
+    #
+    #   Olek met Petro.
+    #   He handed Petro ... and said, "..."
+    #
+    # Resolve by local role elimination only. Never infer
+    # gender from names.
+    # --------------------------------------------------------
+    before_quote = source[:start]
+
+    current = (
+        _direct_attribution_current_sentence(
+            before_quote
+        )
+    )
+
+    prior = (
+        _direct_attribution_previous_sentence(
+            before_quote
+        )
+    )
+
+    if not current or not prior:
+        return False
+
+    match = re.search(
+        rf'\b(?P<pronoun>'
+        rf'{_DIRECT_ATTRIBUTION_PRONOUN_RE}'
+        rf')\b'
+        rf'(?P<body>[^.!?]{{0,180}}?)'
+        rf'\b(?:{_DIRECT_ATTRIBUTION_VERBS})\b'
+        rf'[^.!?]{{0,40}}'
+        rf'[,:"“”\'‘’]\s*$',
+        current,
+        re.I,
+    )
+
+    if not match:
+        return False
+
+    prior_names = list(
+        dict.fromkeys(
+            _direct_attribution_names(
+                prior
+            )
+        )
+    )
+
+    current_names = list(
+        dict.fromkeys(
+            _direct_attribution_names(
+                match.group('body')
+            )
+        )
+    )
+
+    if len(prior_names) != 2:
+        return False
+
+    if speaker not in prior_names:
+        return False
+
+    other = next(
+        name
+        for name in prior_names
+        if name != speaker
+    )
+
+    if current_names != [other]:
+        return False
+
+    return True
+
+
+
+_DIRECT_ATTRIBUTION_SUBJECT_PRONOUN_RE = re.compile(
+    r'\b(?:i|we|you|he|she|they)\b',
+    re.I,
+)
+
+
+_DIRECT_ATTRIBUTION_STRONG_CLAUSE_BOUNDARY_RE = re.compile(
+    r'["”’]\s*(?:but|yet)\s+',
+    re.I,
+)
+
+
+def _direct_attribution_active_clause(
+    before: str,
+) -> str:
+    """
+    Return the attribution clause nearest the upcoming quote.
+
+    Example:
+
+        Dax started, "..." but Lora interrupted, "
+
+    becomes:
+
+        Lora interrupted, "
+
+    This prevents an earlier speaker/name from either blocking
+    Lora or stealing Lora's quotation.
+
+    Deliberately do not split on generic "and": in
+
+        Mira looked at Jonas and replied, "
+
+    Mira is still the subject and Jonas is not.
+    """
+
+    matches = list(
+        _DIRECT_ATTRIBUTION_STRONG_CLAUSE_BOUNDARY_RE.finditer(
+            before
+        )
+    )
+
+    if not matches:
+        return before
+
+    return before[
+        matches[-1].end():
+    ]
+
+
+
+def _explicit_name_prequote_attribution_supported(
+    before: str,
+    speaker: str,
+) -> bool:
+    """
+    Verify named-speaker attribution before a direct quote.
+
+    The old loose pattern:
+
+        <speaker> ... <speech verb>, "
+
+    could mistake an object/listener for the speaker:
+
+        He handed Petro the key and said, "
+                  ^^^^^
+
+    Require the candidate to be the leading identifiable actor
+    in the current clause fragment. If a personal subject pronoun
+    or another proper name already occurs before the candidate,
+    abstain.
+
+    This remains intentionally conservative. It is attribution
+    evidence, not general semantic-role labeling.
+    """
+
+    speaker_re = re.escape(
+        speaker
+    )
+
+    clause = _direct_attribution_active_clause(
+        before
+    )
+
+    match = re.search(
+        rf'\b{speaker_re}\b'
+        rf'[^.!?]{{0,140}}'
+        rf'\b(?:{_DIRECT_ATTRIBUTION_VERBS})\b'
+        rf'[^.!?]{{0,40}}'
+        rf'[,:"“”\'‘’]\s*$',
+        clause,
+        re.I,
+    )
+
+    if not match:
+        return False
+
+    # The candidate itself must occur in narration, not inside an
+    # earlier quoted vocative/content span.
+    #
+    #   "Sir and husband," she said, "..."
+    #    ^^^^^^^^^^^^^^^
+    #
+    # The actual attribution actor is "she"; the quoted address
+    # must never masquerade as a named speaker.
+    if _say_position_inside_direct_quote(
+        clause,
+        match.start(),
+    ):
+        return False
+
+    prefix = clause[:match.start()]
+
+    # Another explicit pronominal actor already leads this
+    # clause, e.g.:
+    #
+    #   He handed Petro ... and said, "
+    if _DIRECT_ATTRIBUTION_SUBJECT_PRONOUN_RE.search(
+        prefix
+    ):
+        return False
+
+    # Also reject a new explicit pronominal subject BETWEEN the
+    # candidate mention and the communication verb:
+    #
+    #   Mira looked at Jonas and she said, "Wait."
+    #
+    # Mira is not the speaker merely because her name precedes the
+    # real attribution subject.
+    matched_text = match.group(0)
+
+    candidate_end = (
+        matched_text.casefold().find(
+            speaker.casefold()
+        )
+        + len(speaker)
+    )
+
+    remainder = matched_text[
+        candidate_end:
+    ]
+
+    if re.search(
+        rf'\b(?:i|we|you|he|she|they)\b'
+        rf'[^.!?]{{0,100}}'
+        rf'\b(?:{_DIRECT_ATTRIBUTION_VERBS})\b',
+        remainder,
+        re.I,
+    ):
+        return False
+
+    # Another named participant already leads this clause, e.g.:
+    #
+    #   Mira looked at Jonas and replied, "
+    #
+    # Jonas must not steal Mira's quotation.
+    leading_names = _direct_attribution_names(
+        prefix
+    )
+
+    if leading_names:
+        return False
+
+    return True
+
+
+def _source_supports_speaker(
+    source: str,
+    speaker: str,
+    bounds,
+) -> bool:
+    # Require strong local attribution rather than merely
+    # finding a speech verb somewhere in the paragraph.
+
+    if bounds is None:
+        return False
+
+    start, end = bounds
+    speaker_re = re.escape(speaker)
+
+    punctuation = r"[\s,;:!?\"'“”‘’\-–—]*"
+
+    # --------------------------------------------------------
+    # Attribution immediately after the utterance:
+    #
+    #   "...", Mira replied.
+    #   "...", said Mira.
+    # --------------------------------------------------------
+    after = source[end:end + 120]
+
+    if re.search(
+        rf'^{punctuation}'
+        rf'{speaker_re}\s+(?:{_DIRECT_ATTRIBUTION_VERBS})\b',
+        after,
+        re.I,
+    ):
+        return True
+
+    if re.search(
+        rf'^{punctuation}'
+        rf'(?:{_DIRECT_ATTRIBUTION_VERBS})\s+{speaker_re}\b',
+        after,
+        re.I,
+    ):
+        return True
+
+    # --------------------------------------------------------
+    # Attribution before the utterance.
+    #
+    # Restrict evidence to the current sentence. This prevents:
+    #
+    #   Jonas asked what it said. "..." Mira replied.
+    #
+    # from making Jonas the speaker.
+    #
+    # Allow narrative material between speaker and speech verb:
+    #
+    #   Mira folded the report and said, "Wait."
+    #   Mira looked at Jonas and replied, "Wait."
+    # --------------------------------------------------------
+    before = source[max(0, start - 220):start]
+
+    sentence_start = max(
+        before.rfind('.'),
+        before.rfind('!'),
+        before.rfind('?'),
+    )
+
+    if sentence_start >= 0:
+        before = before[sentence_start + 1:]
+
+    if _explicit_name_prequote_attribution_supported(
+        before,
+        speaker,
+    ):
+        return True
+
+    # Inverted attribution:
+    #
+    #   said Mira, "Wait."
+    if re.search(
+        rf'\b(?:{_DIRECT_ATTRIBUTION_VERBS})\b'
+        rf'\s+{speaker_re}\b'
+        rf'[^.!?]{{0,40}}'
+        rf'[,:"“”\'‘’]\s*$',
+        before,
+        re.I,
+    ):
+        return True
+
+
+    # Explicit-name attribution did not fire. Try only the
+    # precision-safe pronoun-attribution bridge.
+    if _source_supports_pronoun_attributed_speaker(
+        source,
+        speaker,
+        bounds,
+    ):
+        return True
+
+
+    return False
+
+
+
+_SAY_RUN_QUOTE_RE = re.compile(
+    r'["“”]'
+)
+
+_SAY_RUN_STARTS_QUOTE_RE = re.compile(
+    r'^\s*["“]'
+)
+
+_SAY_RUN_LEADIN_VERBS = (
+    r'began|continued|started|'
+    r'replied|answered|said|remarked|declared'
+)
+
+
+def _say_run_quote_pairs(
+    text: str,
+):
+    """
+    Literal closed quote pairs used only to find strong local
+    attribution anchors.
+
+    Odd trailing quotation marks are intentionally left unpaired:
+    they represent the common old-style multi-paragraph speech form.
+    """
+
+    positions = [
+        match.start()
+        for match in _SAY_RUN_QUOTE_RE.finditer(
+            text
+        )
+    ]
+
+    pairs = []
+
+    for i in range(
+        0,
+        len(positions) - 1,
+        2,
+    ):
+        start = positions[i] + 1
+        end = positions[i + 1]
+
+        if end > start:
+            pairs.append(
+                (
+                    start,
+                    end,
+                )
+            )
+
+    return pairs
+
+
+def _say_run_candidate_direct_anchor(
+    text: str,
+    speaker: str,
+) -> bool:
+    """
+    Does this paragraph contain any literal quotation with positive
+    direct attribution to THIS candidate speaker?
+
+    No speaker discovery happens here.
+    """
+
+    for bounds in _say_run_quote_pairs(
+        text
+    ):
+        if _source_supports_speaker(
+            text,
+            speaker,
+            bounds,
+        ):
+            return True
+
+    return False
+
+
+def _say_run_candidate_named_leadin(
+    text: str,
+    speaker: str,
+) -> bool:
+    """
+    Strong cross-paragraph candidate-conditioned lead-in:
+
+        Sir John began--
+        "Irene, ..."
+
+    Candidate name must be explicit. No pronoun resolution.
+    """
+
+    tail = text[-420:]
+
+    speaker_re = re.escape(
+        speaker
+    )
+
+    return bool(
+        re.search(
+            rf'\b{speaker_re}\b'
+            rf'[^.!?]{{0,320}}'
+            rf'\b(?:{_SAY_RUN_LEADIN_VERBS})\b'
+            rf'[^.!?]{{0,80}}'
+            rf'(?::|--|—|-)\s*$',
+            tail,
+            re.I,
+        )
+    )
+
+
+def _say_run_document_leadin(
+    text: str,
+) -> bool:
+    """
+    Written-content introduction applying to the NEXT paragraph.
+
+        The lines were these:--
+        "Accept my warmest greeting ..."
+
+    This prevents quoted documents from inheriting a spoken run.
+    """
+
+    tail = text[-360:]
+
+    if not re.search(
+        r'(?::|:--|:—)\s*$',
+        tail,
+    ):
+        return False
+
+    return bool(
+        re.search(
+            r'\b(?:'
+            r'lines?\s+were\s+these|'
+            r'words?\s+were\s+these|'
+            r'note|letter|card|message|'
+            r'written|inscription|document'
+            r')\b',
+            tail,
+            re.I,
+        )
+        or _DOCUMENT_CUE_RE.search(
+            tail
+        )
+    )
+
+
+def _say_run_bounds_start_inside_quote(
+    text: str,
+    bounds,
+) -> bool:
+    """
+    Require extracted SAY content to begin inside quoted material.
+    This stops narration later in a mixed paragraph from borrowing
+    an earlier speaker anchor.
+    """
+
+    if bounds is None:
+        return False
+
+    start, _end = bounds
+
+    quote_count_before = len(
+        _SAY_RUN_QUOTE_RE.findall(
+            text[:start]
+        )
+    )
+
+    return (
+        quote_count_before % 2
+        == 1
+    )
+
+
+
+def _say_run_candidate_previous_subject_pronoun_anchor(
+    previous_text: str,
+    current_text: str,
+    speaker: str,
+) -> bool:
+    """
+    Precision-safe cross-paragraph anchor for:
+
+        Sir John chatted ...
+        "Irene, ..." he began; "..."
+
+    This does NOT perform gender inference and does NOT discover a
+    speaker.
+
+    Positive evidence requires all of:
+
+    1. the previous paragraph's terminal sentence has the proposed
+       candidate as its leading explicit subject;
+    2. after removing that exact candidate surface, no other
+       name-like participant is detected in that terminal sentence;
+    3. the current paragraph starts with direct quotation;
+    4. immediately after the first closed quoted span is a pronoun
+       plus a direct-speech attribution verb.
+
+    Thus:
+
+        Marek met Pavel.
+        "Come here," he said.
+
+    abstains because Pavel is another explicit named participant.
+
+    The pronoun's gender is never compared with the candidate name.
+    """
+
+    previous_text = (
+        previous_text
+        or ''
+    ).strip()
+
+    current_text = (
+        current_text
+        or ''
+    ).strip()
+
+    speaker = (
+        speaker
+        or ''
+    ).strip()
+
+    if (
+        not previous_text
+        or not current_text
+        or not speaker
+    ):
+        return False
+
+    if not _SAY_RUN_STARTS_QUOTE_RE.match(
+        current_text
+    ):
+        return False
+
+    # Previous paragraph normally ends with punctuation, so this
+    # returns its terminal completed sentence. Fall back to the
+    # current sentence helper for malformed/old prose without final
+    # punctuation.
+    terminal = (
+        _direct_attribution_previous_sentence(
+            previous_text
+        )
+        or _direct_attribution_current_sentence(
+            previous_text
+        )
+    ).strip()
+
+    if not terminal:
+        return False
+
+    speaker_match = re.match(
+        rf'^\s*'
+        rf'{re.escape(speaker)}\b',
+        terminal,
+        re.I,
+    )
+
+    if speaker_match is None:
+        return False
+
+    if _say_position_inside_direct_quote(
+        terminal,
+        speaker_match.start(),
+    ):
+        return False
+
+    # Remove the known candidate before looking for competitors.
+    # This avoids depending on how the intentionally lightweight
+    # capitalized-token detector splits a multi-word name such as
+    # "Sir John".
+    without_candidate = (
+        terminal[
+            :speaker_match.start()
+        ]
+        + ' '
+        + terminal[
+            speaker_match.end():
+        ]
+    )
+
+    competing_names = list(
+        dict.fromkeys(
+            _direct_attribution_names(
+                without_candidate
+            )
+        )
+    )
+
+    if competing_names:
+        return False
+
+    quote_pairs = _say_run_quote_pairs(
+        current_text
+    )
+
+    if not quote_pairs:
+        return False
+
+    _first_start, first_end = (
+        quote_pairs[0]
+    )
+
+    after_first_quote = current_text[
+        first_end + 1:
+        first_end + 140
+    ]
+
+    punctuation = (
+        r'[\s,;:!?'
+        r'"\'“”‘’'
+        r'\-–—]*'
+    )
+
+    return bool(
+        re.match(
+            rf'^{punctuation}'
+            rf'{_DIRECT_ATTRIBUTION_PRONOUN_RE}\s+'
+            rf'(?:{_DIRECT_ATTRIBUTION_VERBS})\b',
+            after_first_quote,
+            re.I,
+        )
+    )
+
+
+
+def _say_run_candidate_pronoun_chain_leadin(
+    text: str,
+    speaker: str,
+) -> bool:
+    """
+    Positive candidate-conditioned evidence for a narrow discourse
+    chain ending in a pronoun speech lead-in.
+
+    Supported structural form:
+
+        S1: Irene began ... knowing ... she ...
+        S2: She pondered ...
+        S3: ... she thus began:
+        NEXT: "..."
+
+    Important: this is NOT name->gender inference.
+
+    The literal pronoun token is discovered from the terminal speech
+    lead-in and must be repeated through the chain. The candidate is
+    anchored syntactically by an explicit candidate + continuation
+    verb in the first of the three sentences.
+
+    Plain discourse continuation remains insufficient:
+
+        Marek marked the time.
+        He waited.
+
+    This helper also does not resolve:
+
+        Marek and Pavel began ...
+        He ...
+
+    because the candidate is not the sole immediate subject of the
+    anchor predicate.
+    """
+
+    text = (
+        text
+        or ''
+    ).strip()
+
+    speaker = (
+        speaker
+        or ''
+    ).strip()
+
+    if (
+        not text
+        or not speaker
+    ):
+        return False
+
+    chunks = _say_sentence_chunks(
+        text
+    )
+
+    # Deliberately narrow topology.
+    #
+    # anchor sentence
+    #     ↓
+    # explicit same-pronoun bridge sentence
+    #     ↓
+    # terminal same-pronoun speech lead-in
+    if len(chunks) < 3:
+        return False
+
+    anchor_sentence = chunks[-3]
+    bridge_sentence = chunks[-2]
+    terminal_sentence = chunks[-1]
+
+    terminal_match = re.search(
+        rf'\b(?P<pronoun>'
+        rf'{_DIRECT_ATTRIBUTION_PRONOUN_RE}'
+        rf')\b'
+        rf'\s+'
+        rf'(?:(?:thus|then|now|again)\s+'
+        rf"|[A-Za-z'-]+ly\s+)"
+        rf'{{0,3}}'
+        rf'\b(?:{_SAY_RUN_LEADIN_VERBS})\b'
+        rf'[\s,;]*'
+        rf'(?::|--|—|-)\s*$',
+        terminal_sentence,
+        re.I,
+    )
+
+    if terminal_match is None:
+        return False
+
+    pronoun = terminal_match.group(
+        'pronoun'
+    )
+
+    # --------------------------------------------------------
+    # Middle sentence must explicitly continue with the exact
+    # same pronoun token.
+    #
+    #   She pondered ...
+    #
+    # We compare literal pronoun identity only. No gender mapping.
+    # --------------------------------------------------------
+    if re.match(
+        rf'^\s*{re.escape(pronoun)}\b',
+        bridge_sentence,
+        re.I,
+    ) is None:
+        return False
+
+    # --------------------------------------------------------
+    # Candidate must be an explicit subject of a continuation
+    # predicate in the anchor sentence:
+    #
+    #   Irene began to consider ...
+    #
+    # Candidate must be immediately followed, apart from adverbs,
+    # by the predicate. This deliberately rejects:
+    #
+    #   Marek and Pavel began ...
+    #
+    # for candidate Marek.
+    # --------------------------------------------------------
+    candidate_match = re.search(
+        rf'\b{re.escape(speaker)}\b'
+        rf'\s+'
+        rf'(?:(?:then|now|again)\s+'
+        rf"|[A-Za-z'-]+ly\s+)"
+        rf'{{0,2}}'
+        rf'\b(?:began|started|continued)\b',
+        anchor_sentence,
+        re.I,
+    )
+
+    if candidate_match is None:
+        return False
+
+    # Candidate must not merely be the second member of a
+    # coordinated subject:
+    #
+    #   Marek and Pavel began ...
+    #             ^^^^^
+    #
+    # A regex starting at "Pavel" would otherwise make Pavel look
+    # like an independent grammatical subject.
+    #
+    # Leading discourse material remains allowed:
+    #
+    #   At this stage Irene began ...
+    #
+    candidate_prefix = anchor_sentence[
+        :candidate_match.start()
+    ]
+
+    if re.search(
+        r'\b(?:and|or|with)\s*$',
+        candidate_prefix,
+        re.I,
+    ):
+        return False
+
+    if _say_position_inside_direct_quote(
+        anchor_sentence,
+        candidate_match.start(),
+    ):
+        return False
+
+    # The same literal pronoun must already occur later in the
+    # anchor sentence, establishing continuity into S2/S3.
+    #
+    #   Irene began ... knowing well she ...
+    #                               ^^^
+    remainder = anchor_sentence[
+        candidate_match.end():
+    ]
+
+    if re.search(
+        rf'\b{re.escape(pronoun)}\b',
+        remainder,
+        re.I,
+    ) is None:
+        return False
+
+    return True
+
+
+
+def _say_crosses_direct_quote_surface(
+    record: Record,
+    source_by_local_no: dict[int, str],
+) -> bool:
+    """
+    Return True when a SAY extraction starts inside direct quoted
+    speech but crosses a double-quote boundary before its literal
+    content ends.
+
+    This catches mixed surfaces such as:
+
+        "This," said Mira, "is the room..."
+
+    when the model proposes:
+
+        This," said Mira, "is the room...
+
+    The extraction begins in spoken material, leaves it for narrator
+    attribution, then enters spoken material again. That is not one
+    contiguous spoken source surface.
+
+    Precision-first policy:
+    reject the mixed observation rather than silently deleting or
+    rewriting narrator text.
+
+    Clean old-style open quotations remain valid:
+
+        "The speech continues to paragraph end
+
+    because no quote boundary is crossed inside the extracted
+    literal content.
+    """
+
+    if (
+        record.tag != 'SAY'
+        or len(record.spans) != 1
+    ):
+        return False
+
+    parts = _say_parts(
+        record
+    )
+
+    if parts is None:
+        return False
+
+    _speaker, content = parts
+
+    local_no = int(
+        record.spans[0]
+    )
+
+    source = (
+        source_by_local_no.get(
+            local_no,
+            '',
+        )
+        or ''
+    )
+
+    if not source:
+        return False
+
+    bounds = _say_content_bounds(
+        source,
+        content,
+    )
+
+    if bounds is None:
+        return False
+
+    if not _say_run_bounds_start_inside_quote(
+        source,
+        bounds,
+    ):
+        return False
+
+    start, end = bounds
+
+    # _say_parts() removes ordinary outer quote marks from the
+    # payload, so a remaining source-level double quote strictly
+    # inside these literal bounds represents a quote boundary
+    # crossed by the extraction.
+    return bool(
+        _SAY_RUN_QUOTE_RE.search(
+            source[
+                start:end
+            ]
+        )
+    )
+
+
+def _source_supports_speaker_run(
+    record: Record,
+    source_by_local_no: dict[int, str],
+    speaker: str,
+    content: str,
+) -> bool:
+    """
+    Positive candidate-conditioned evidence for old-style
+    multi-paragraph direct speech.
+
+    Supported:
+    1. any explicit named direct anchor in the target paragraph;
+    2. a named candidate lead-in in the immediately previous
+       paragraph;
+    3. a precision-safe candidate/pronoun discourse chain ending
+       in an explicit speech lead-in;
+    4. continuation of an explicitly anchored OPEN quotation
+       through consecutive quoted paragraphs.
+
+    Not supported:
+    - pronoun-only anchors ("she said", "said he");
+    - speaker guessing / NER;
+    - propagation across paragraph gaps;
+    - quoted document continuations.
+
+    The candidate speaker comes from the SAY record. Source evidence
+    may validate it, but never invent or replace it.
+    """
+
+    if len(record.spans) != 1:
+        return False
+
+    target_no = int(
+        record.spans[0]
+    )
+
+    target_text = (
+        source_by_local_no.get(
+            target_no,
+            ''
+        )
+        or ''
+    )
+
+    if not target_text:
+        return False
+
+    target_bounds = _say_content_bounds(
+        target_text,
+        content,
+    )
+
+    if not _say_run_bounds_start_inside_quote(
+        target_text,
+        target_bounds,
+    ):
+        return False
+
+    active_open = False
+    previous_no = None
+    previous_text = None
+    pending_named = False
+    pending_document = False
+
+    for local_no in sorted(
+        source_by_local_no
+    ):
+        if local_no > target_no:
+            break
+
+        text = (
+            source_by_local_no.get(
+                local_no,
+                ''
+            )
+            or ''
+        )
+
+        # Missing paragraphs mean we do not know whether the speech
+        # run continued. Precision-first reset.
+        if (
+            previous_no is not None
+            and local_no != previous_no + 1
+        ):
+            active_open = False
+            pending_named = False
+            pending_document = False
+
+        quote_count = len(
+            _SAY_RUN_QUOTE_RE.findall(
+                text
+            )
+        )
+
+        starts_quote = bool(
+            _SAY_RUN_STARTS_QUOTE_RE.match(
+                text
+            )
+        )
+
+        direct_anchor = (
+            _say_run_candidate_direct_anchor(
+                text,
+                speaker,
+            )
+        )
+
+        previous_pronoun_anchor = (
+            previous_text is not None
+            and previous_no is not None
+            and local_no == previous_no + 1
+            and _say_run_candidate_previous_subject_pronoun_anchor(
+                previous_text,
+                text,
+                speaker,
+            )
+        )
+
+        supported_here = False
+
+        if direct_anchor:
+            supported_here = True
+
+        elif (
+            previous_pronoun_anchor
+            and not pending_document
+        ):
+            supported_here = True
+
+        elif (
+            starts_quote
+            and pending_named
+            and not pending_document
+        ):
+            supported_here = True
+
+        elif (
+            starts_quote
+            and active_open
+            and not pending_document
+        ):
+            supported_here = True
+
+        if (
+            local_no == target_no
+            and supported_here
+        ):
+            return True
+
+        if supported_here:
+            # Old-style continuation paragraphs frequently start
+            # with one opening quote and intentionally omit the
+            # closing quote until the final paragraph.
+            active_open = (
+                quote_count % 2
+                == 1
+            )
+
+        elif quote_count:
+            if not active_open:
+                active_open = False
+
+        else:
+            active_open = False
+
+        pending_named = (
+            _say_run_candidate_named_leadin(
+                text,
+                speaker,
+            )
+            or
+            _say_run_candidate_pronoun_chain_leadin(
+                text,
+                speaker,
+            )
+        )
+
+        pending_document = (
+            _say_run_document_leadin(
+                text
+            )
+        )
+
+        previous_no = local_no
+        previous_text = text
+
+    return False
+
+
+def _say_previous_document_leadin(
+    record: Record,
+    source_by_local_no: dict[int, str],
+) -> bool:
+    """
+    Detect a written-content introduction in the immediately
+    preceding paragraph.
+    """
+
+    if len(record.spans) != 1:
+        return False
+
+    local_no = int(
+        record.spans[0]
+    )
+
+    previous = source_by_local_no.get(
+        local_no - 1
+    )
+
+    if not previous:
+        return False
+
+    return _say_run_document_leadin(
+        previous
+    )
+
+
+def _source_marks_document_text(
+    source: str,
+    bounds,
+) -> bool:
+    # Written material needs a LOCAL introduction. A document
+    # noun somewhere earlier in the sentence is not enough.
+    #
+    # Positive examples:
+    #
+    #   a short note: Come alone.
+    #   someone had written: "Do not restart."
+    #
+    # Negative example:
+    #
+    #   Mira folded the report and said, "Wait."
+    #
+    # The latter contains "report", but the colon/quote is
+    # introduced by a speech verb, not by the document.
+
+    if bounds is None:
+        return False
+
+    start, _ = bounds
+
+    before = source[max(0, start - 260):start]
+
+    sentence_start = max(
+        before.rfind('.'),
+        before.rfind('!'),
+        before.rfind('?'),
+    )
+
+    if sentence_start >= 0:
+        before = before[sentence_start + 1:]
+
+    # Document prose in our supported strong-evidence form
+    # must introduce its content with a colon immediately
+    # before the extracted text/quote.
+    colon = re.search(
+        r':\s*["“‘]?\s*$',
+        before,
+    )
+
+    if colon is None:
+        return False
+
+    introducer = before[:colon.start()]
+
+    # A speech verb governing this colon wins. Merely mentioning
+    # a report/note earlier must not turn spoken dialogue into
+    # document text.
+    if re.search(
+        rf'\b(?:{_SAY_VERBS})\b',
+        introducer,
+        re.I,
+    ):
+        return False
+
+    return bool(
+        _DOCUMENT_CUE_RE.search(
+            introducer
+        )
+    )
+
+
+
+
+def _say_source_evidence(
+    record: Record,
+    source_by_local_no: dict[int, str],
+) -> str:
+    """
+    spoken   = explicit local or speech-run attribution
+    indirect = explicit reported communication
+    document = locally or cross-paragraph introduced written text
+    unknown  = no positive source support
+
+    Important ordering invariant:
+
+        document classification precedes speaker validation.
+
+    A model may invent or misidentify the document author, but the
+    source can still positively prove that the extracted content is
+    WRITTEN rather than spoken. Sanitizer must retain that evidence
+    so the record is counted as document-dropped, not merely
+    unsupported/invalid-speaker.
+    """
+
+    parts = _say_parts(
+        record
+    )
+
+    if parts is None:
+        return 'unknown'
+
+    speaker, content = parts
+
+    source = ' '.join(
+        source_by_local_no.get(
+            local_no,
+            '',
+        )
+        for local_no in record.spans
+    )
+
+    if not source:
+        return 'unknown'
+
+    bounds = _say_content_bounds(
+        source,
+        content,
+    )
+
+    # --------------------------------------------------------
+    # Written content evidence outranks speaker identity.
+    # --------------------------------------------------------
+    if _source_marks_document_text(
+        source,
+        bounds,
+    ):
+        return 'document'
+
+    if _say_previous_document_leadin(
+        record,
+        source_by_local_no,
+    ):
+        return 'document'
+
+    # --------------------------------------------------------
+    # Direct-speech surface integrity.
+    #
+    # A record that starts inside quoted speech but crosses into
+    # narrator text cannot be classified as spoken merely because
+    # its proposed speaker is otherwise source-supported.
+    # --------------------------------------------------------
+    if _say_crosses_direct_quote_surface(
+        record,
+        source_by_local_no,
+    ):
+        return 'unknown'
+
+    # --------------------------------------------------------
+    # From here onward we are deciding WHO SPOKE.
+    # Require a structurally plausible explicit speaker surface.
+    # --------------------------------------------------------
+    if not _say_speaker_surface_valid(
+        record,
+        source_by_local_no,
+    ):
+        return 'unknown'
+
+    if _source_supports_speaker(
+        source,
+        speaker,
+        bounds,
+    ):
+        return 'spoken'
+
+    if _source_supports_speaker_run(
+        record,
+        source_by_local_no,
+        speaker,
+        content,
+    ):
+        return 'spoken'
+
+    if _source_supports_indirect_speech(
+        source,
+        speaker,
+        content,
+    ):
+        return 'indirect'
+
+    return 'unknown'
+
+def _relocate_say_provenance(
+    record: Record,
+    source_by_local_no: dict[int, str],
+) -> tuple[Record, bool]:
+    """
+    Repair SAY provenance only when the candidate has no positive
+    evidence at its declared span, its content is not literally
+    present at that declared provenance, and exactly one source
+    paragraph positively supports the same SAY payload.
+
+    Only spans may change. Payload, speaker/content, epistemic
+    status, and raw model output remain untouched.
+
+    Literal content at the declared span => abstain. UNKNOWN
+    attribution alone is not evidence that provenance is wrong.
+
+    Zero or multiple positive locations => abstain.
+    Written/document evidence is never a relocation target.
+    """
+
+    if record.tag != 'SAY':
+        return record, False
+
+    current = _say_source_evidence(
+        record,
+        source_by_local_no,
+    )
+
+    # Already grounded, or explicitly document-backed.
+    # Do not reinterpret it elsewhere.
+    if current != 'unknown':
+        return record, False
+
+    # --------------------------------------------------------
+    # Precision firewall:
+    #
+    # If the SAY content literally exists at its declared
+    # provenance, an UNKNOWN attribution is not evidence that
+    # provenance is wrong.
+    #
+    # The same words may legitimately occur more than once:
+    #
+    #   P01 Mira said, "Wait here."
+    #   P02 ... "Wait here."
+    #
+    # Relocating P02 merely because P01 has stronger attribution
+    # would erase real source identity. In this situation we
+    # abstain and let the ordinary verifier decide whether the
+    # declared observation itself is supportable.
+    # --------------------------------------------------------
+    parts = _say_parts(
+        record
+    )
+
+    if parts is not None:
+        _speaker, content = parts
+
+        declared_literal_hit = any(
+            (
+                local_no
+                in source_by_local_no
+                and _say_content_bounds(
+                    source_by_local_no[
+                        local_no
+                    ],
+                    content,
+                )
+                is not None
+            )
+            for local_no in record.spans
+        )
+
+        if declared_literal_hit:
+            return record, False
+
+    hits = []
+
+    for local_no in sorted(
+        source_by_local_no
+    ):
+        probe = Record(
+            tag=record.tag,
+            payload=record.payload,
+            spans=[local_no],
+            epistemic=record.epistemic,
+            raw=record.raw,
+        )
+
+        evidence = _say_source_evidence(
+            probe,
+            source_by_local_no,
+        )
+
+        if evidence in {
+            'spoken',
+            'indirect',
+        }:
+            hits.append(
+                local_no
+            )
+
+    if len(hits) != 1:
+        return record, False
+
+    target = hits[0]
+
+    if record.spans == [target]:
+        return record, False
+
+    relocated = Record(
+        tag=record.tag,
+        payload=record.payload,
+        spans=[target],
+        epistemic=record.epistemic,
+        raw=record.raw,
+    )
+
+    return relocated, True
+
+
+
+def _say_replace_speaker(
+    record: Record,
+    speaker: str,
+) -> Record:
+    """
+    Replace only the proposed SAY speaker.
+
+    Spoken content, provenance, epistemic status, and raw model
+    output remain unchanged.
+    """
+
+    if (
+        record.tag != 'SAY'
+        or '|' not in record.payload
+    ):
+        return record
+
+    _old_speaker, raw_content = (
+        record.payload.split(
+            '|',
+            1,
+        )
+    )
+
+    return Record(
+        tag=record.tag,
+        payload=(
+            f"{speaker} | "
+            f"{raw_content.strip()}"
+        ),
+        spans=list(record.spans),
+        epistemic=record.epistemic,
+        raw=record.raw,
+    )
+
+
+def _repair_say_run_speakers(
+    records: list[Record],
+    source_by_local_no: dict[int, str],
+) -> tuple[list[Record], int]:
+    """
+    Correct a weak-model speaker proposal only from an already
+    source-grounded speaker seed in the same segment.
+
+    Architecture:
+
+        model proposes CONTENT + speaker hint
+                    |
+                    v
+        at least one existing SAY record establishes
+        candidate speaker with positive SOURCE evidence
+                    |
+                    v
+        candidate's deterministic open speech-run
+        positively supports this exact content/provenance
+                    |
+                    v
+        if exactly one seeded speaker qualifies:
+            rewrite speaker only
+
+    This deliberately does NOT:
+
+    - discover arbitrary names from SOURCE;
+    - infer gender from names/pronouns;
+    - resolve an unanchored "he/she";
+    - invent a speaker when no positively grounded seed exists;
+    - rewrite document evidence;
+    - use indirect speech as a run seed.
+
+    Typical repair:
+
+        source run = Sir John
+        model = Sir Sydney | ... @P20
+                    ↓
+        canonical = Sir John | ... @P20
+
+    because Sir John was already positively grounded earlier in
+    that same source run.
+    """
+
+    # --------------------------------------------------------
+    # Seed speakers only from records which ALREADY survive
+    # positive direct/spoken source verification.
+    #
+    # The model cannot introduce a candidate merely by naming it.
+    # --------------------------------------------------------
+    seed_speakers = set()
+
+    for record in records:
+        if record.tag != 'SAY':
+            continue
+
+        parts = _say_parts(
+            record
+        )
+
+        if parts is None:
+            continue
+
+        speaker, _content = parts
+
+        if _say_source_evidence(
+            record,
+            source_by_local_no,
+        ) == 'spoken':
+            seed_speakers.add(
+                speaker
+            )
+
+    if not seed_speakers:
+        return list(records), 0
+
+    # --------------------------------------------------------
+    # Existing conflict resolver owns explicit multi-speaker
+    # proposals for the same semantic SAY observation.
+    #
+    # Example:
+    #
+    #   Mira  | Wait here. @P01
+    #   Jonas | Wait here. @P01
+    #
+    # Do not silently rewrite Jonas -> Mira here. Downstream
+    # conflict resolution must see both proposals, compare their
+    # SOURCE evidence, and account for the resolution explicitly.
+    #
+    # Run-speaker repair is for orphan wrong-speaker proposals
+    # inside an already grounded open speech-run.
+    # --------------------------------------------------------
+    proposed_speakers_by_key = {}
+
+    for record in records:
+        identity = _say_identity(
+            record
+        )
+
+        if identity is None:
+            continue
+
+        key, speaker = identity
+
+        proposed_speakers_by_key.setdefault(
+            key,
+            set(),
+        ).add(
+            speaker
+        )
+
+    repaired_records = []
+    rewritten = 0
+
+    for record in records:
+        if record.tag != 'SAY':
+            repaired_records.append(
+                record
+            )
+            continue
+
+        identity = _say_identity(
+            record
+        )
+
+        if identity is not None:
+            key, _speaker = identity
+
+            if len(
+                proposed_speakers_by_key.get(
+                    key,
+                    set(),
+                )
+            ) > 1:
+                repaired_records.append(
+                    record
+                )
+                continue
+
+        if _say_crosses_direct_quote_surface(
+            record,
+            source_by_local_no,
+        ):
+            repaired_records.append(
+                record
+            )
+            continue
+
+        current_evidence = (
+            _say_source_evidence(
+                record,
+                source_by_local_no,
+            )
+        )
+
+        # Never rewrite something already positively classified.
+        #
+        # This also preserves explicit DOCUMENT classification.
+        if current_evidence != 'unknown':
+            repaired_records.append(
+                record
+            )
+            continue
+
+        parts = _say_parts(
+            record
+        )
+
+        if parts is None:
+            repaired_records.append(
+                record
+            )
+            continue
+
+        proposed_speaker, content = parts
+
+        candidates = []
+
+        for candidate in sorted(
+            seed_speakers
+        ):
+            if (
+                candidate.casefold()
+                == proposed_speaker.casefold()
+            ):
+                continue
+
+            probe = _say_replace_speaker(
+                record,
+                candidate,
+            )
+
+            # Important:
+            #
+            # Require specifically deterministic SPEECH-RUN
+            # evidence. Do not use generic indirect attribution
+            # or other looser routes for speaker correction.
+            if _source_supports_speaker_run(
+                probe,
+                source_by_local_no,
+                candidate,
+                content,
+            ):
+                candidates.append(
+                    candidate
+                )
+
+        # Precision rule:
+        # exactly one grounded run candidate or abstain.
+        if len(candidates) != 1:
+            repaired_records.append(
+                record
+            )
+            continue
+
+        repaired_records.append(
+            _say_replace_speaker(
+                record,
+                candidates[0],
+            )
+        )
+
+        rewritten += 1
+
+    return (
+        repaired_records,
+        rewritten,
+    )
+
+
+
+def _dedupe_say_contained_records(
+    records: list[Record],
+    source_by_local_no: dict[int, str],
+) -> tuple[list[Record], int]:
+    """
+    Remove redundant SAY records whose literal source interval is
+    strictly contained in another already-validated SAY record.
+
+    Only comparable observations participate:
+
+    - SAY only;
+    - exactly one identical provenance span;
+    - same normalized speaker;
+    - same epistemic state;
+    - both literal contents resolvable in SOURCE.
+
+    Example:
+
+        P16 Sir John | I was led ... Was I falsely informed ...?
+        P16 Sir John | Was I falsely informed ...?
+
+    The second observation adds no source information and is
+    redundant.
+
+    This is deliberately SOURCE-bounds based rather than ordinary
+    substring matching. Distinct utterances in different spans, or
+    disjoint utterances within one paragraph, remain independent.
+    """
+
+    say_info = {}
+
+    for index, record in enumerate(
+        records
+    ):
+        if (
+            record.tag != 'SAY'
+            or len(record.spans) != 1
+        ):
+            continue
+
+        parts = _say_parts(
+            record
+        )
+
+        if parts is None:
+            continue
+
+        speaker, content = parts
+
+        local_no = int(
+            record.spans[0]
+        )
+
+        source = (
+            source_by_local_no.get(
+                local_no,
+                '',
+            )
+            or ''
+        )
+
+        if not source:
+            continue
+
+        bounds = _say_content_bounds(
+            source,
+            content,
+        )
+
+        if bounds is None:
+            continue
+
+        # Defensive invariant. In production this function runs
+        # after the spoken-surface firewall, but never let a mixed
+        # surface become the record that suppresses a clean one.
+        if _say_crosses_direct_quote_surface(
+            record,
+            source_by_local_no,
+        ):
+            continue
+
+        say_info[index] = (
+            norm(speaker),
+            local_no,
+            record.epistemic,
+            bounds,
+        )
+
+    drop_indexes = set()
+
+    indexes = list(
+        say_info
+    )
+
+    for i in indexes:
+        if i in drop_indexes:
+            continue
+
+        (
+            speaker_i,
+            local_no_i,
+            epistemic_i,
+            bounds_i,
+        ) = say_info[i]
+
+        start_i, end_i = bounds_i
+
+        for j in indexes:
+            if (
+                i == j
+                or j in drop_indexes
+            ):
+                continue
+
+            (
+                speaker_j,
+                local_no_j,
+                epistemic_j,
+                bounds_j,
+            ) = say_info[j]
+
+            if (
+                speaker_i != speaker_j
+                or local_no_i != local_no_j
+                or epistemic_i != epistemic_j
+            ):
+                continue
+
+            start_j, end_j = bounds_j
+
+            # j is strictly contained in i.
+            if (
+                start_i <= start_j
+                and end_j <= end_i
+                and bounds_i != bounds_j
+            ):
+                drop_indexes.add(
+                    j
+                )
+
+    if not drop_indexes:
+        return list(records), 0
+
+    return (
+        [
+            record
+            for index, record in enumerate(
+                records
+            )
+            if index not in drop_indexes
+        ],
+        len(
+            drop_indexes
+        ),
+    )
+
+
+def _sanitize_say_coverage(
+    parsed: Parsed,
+    source_by_local_no: dict[int, str] | None = None,
+) -> Parsed:
+    """
+    Precision-first source-aware SAY verifier.
+
+    Keep SAY only when source supplies positive evidence:
+    - explicit direct speech attribution; or
+    - explicit indirect/reported communication.
+
+    Written content, unsupported narration, and ambiguous
+    attribution are rejected.
+
+    Conflicting speakers are retained only when exactly one
+    candidate has positive source support.
+    """
+
+    source_by_local_no = source_by_local_no or {}
+
+    repaired_records = []
+    provenance_relocated = 0
+
+    for record in parsed.records:
+        if record.tag != 'SAY':
+            repaired_records.append(record)
+            continue
+
+        repaired, relocated = (
+            _relocate_say_provenance(
+                record,
+                source_by_local_no,
+            )
+        )
+
+        if relocated:
+            provenance_relocated += 1
+
+        repaired_records.append(repaired)
+
+    (
+        repaired_records,
+        speaker_rewritten,
+    ) = _repair_say_run_speakers(
+        repaired_records,
+        source_by_local_no,
+    )
+
+    groups = {}
+
+    for record in repaired_records:
+        identity = _say_identity(record)
+
+        if identity is None:
+            continue
+
+        key, _speaker = identity
+        groups.setdefault(key, []).append(record)
+
+    conflicting_keys = {
+        key
+        for key, records in groups.items()
+        if len({
+            _say_identity(record)[1]
+            for record in records
+            if _say_identity(record) is not None
+        }) > 1
+    }
+
+    invalid_speaker_ids = {
+        id(record)
+        for record in repaired_records
+        if (
+            record.tag == 'SAY'
+            and not _say_speaker_surface_valid(
+                record,
+                source_by_local_no,
+            )
+        )
+    }
+
+    evidence_by_id = {
+        id(record): _say_source_evidence(
+            record,
+            source_by_local_no,
+        )
+        for record in repaired_records
+        if record.tag == 'SAY'
+    }
+
+    mixed_surface_ids = {
+        id(record)
+        for record in repaired_records
+        if (
+            record.tag == 'SAY'
+            and _say_crosses_direct_quote_surface(
+                record,
+                source_by_local_no,
+            )
+        )
+    }
+
+    resolved_keep_ids = set()
+    unresolved_conflicts = set()
+    conflict_resolved = 0
+
+    for key in conflicting_keys:
+        records = groups[key]
+
+        supported = [
+            record
+            for record in records
+            if evidence_by_id.get(
+                id(record),
+                'unknown',
+            ) in {
+                'spoken',
+                'indirect',
+            }
+        ]
+
+        # Overlapping micro-batches may emit the same supported
+        # speaker/content more than once, for example once with
+        # outer quotes and once without them.
+        #
+        # Conflict resolution is about WHO is source-supported,
+        # not how many equivalent records happened to be emitted.
+        supported_speakers = {
+            _say_identity(record)[1]
+            for record in supported
+            if _say_identity(record) is not None
+        }
+
+        if len(supported_speakers) == 1:
+            winning_speaker = next(
+                iter(
+                    supported_speakers
+                )
+            )
+
+            for record in supported:
+                identity = _say_identity(
+                    record
+                )
+
+                if (
+                    identity is not None
+                    and identity[1]
+                    == winning_speaker
+                ):
+                    resolved_keep_ids.add(
+                        id(record)
+                    )
+
+            conflict_resolved += 1
+
+        else:
+            unresolved_conflicts.add(key)
+
+    records = []
+    seen_semantic_say = set()
+
+    conflict_dropped = 0
+    document_dropped = 0
+    unsupported_dropped = 0
+    speaker_surface_dropped = 0
+    mixed_surface_dropped = 0
+    duplicate_dropped = 0
+    direct_supported = 0
+    indirect_supported = 0
+
+    for record in repaired_records:
+        if record.tag != 'SAY':
+            records.append(record)
+            continue
+
+        identity = _say_identity(record)
+
+        evidence = evidence_by_id.get(
+            id(record),
+            'unknown',
+        )
+
+        if identity is not None:
+            key, _speaker = identity
+
+            if key in unresolved_conflicts:
+                conflict_dropped += 1
+                continue
+
+            if (
+                key in conflicting_keys
+                and id(record) not in resolved_keep_ids
+            ):
+                conflict_dropped += 1
+                continue
+
+        if evidence == 'document':
+            document_dropped += 1
+            continue
+
+        if id(record) in mixed_surface_ids:
+            mixed_surface_dropped += 1
+            continue
+
+        if id(record) in invalid_speaker_ids:
+            speaker_surface_dropped += 1
+            continue
+
+        if evidence == 'spoken':
+            direct_supported += 1
+
+        elif evidence == 'indirect':
+            indirect_supported += 1
+
+        else:
+            unsupported_dropped += 1
+            continue
+
+        # ----------------------------------------------------
+        # Semantic overlap dedupe.
+        #
+        # _say_identity() already normalizes outer quotation
+        # marks and ordinary text normalization:
+        #
+        #   Sir John | "I felt hurt." @P11
+        #   Sir John | I felt hurt.   @P11
+        #
+        # are one observation.
+        #
+        # Keep provenance/span boundaries distinct and preserve
+        # epistemic state in the dedupe key.
+        # ----------------------------------------------------
+        semantic_identity = _say_identity(
+            record
+        )
+
+        if semantic_identity is not None:
+            content_key, speaker_key = (
+                semantic_identity
+            )
+
+            semantic_key = (
+                content_key,
+                speaker_key,
+                record.epistemic,
+            )
+
+            if semantic_key in seen_semantic_say:
+                duplicate_dropped += 1
+                continue
+
+            seen_semantic_say.add(
+                semantic_key
+            )
+
+        records.append(record)
+
+    (
+        records,
+        containment_duplicate_dropped,
+    ) = _dedupe_say_contained_records(
+        records,
+        source_by_local_no,
+    )
+
+    stats = dict(parsed.stats)
+
+    stats['parsed'] = len(records)
+    stats['content_count'] = len(records)
+
+    stats['say_provenance_relocated'] = (
+        provenance_relocated
+    )
+    stats['say_speaker_rewritten'] = (
+        speaker_rewritten
+    )
+    stats['say_conflict_dropped'] = (
+        conflict_dropped
+    )
+    stats['say_conflict_resolved'] = (
+        conflict_resolved
+    )
+    stats['say_document_dropped'] = (
+        document_dropped
+    )
+    stats['say_unsupported_dropped'] = (
+        unsupported_dropped
+    )
+    stats['say_speaker_surface_dropped'] = (
+        speaker_surface_dropped
+    )
+    stats['say_mixed_surface_dropped'] = (
+        mixed_surface_dropped
+    )
+    stats['say_duplicate_dropped'] = (
+        duplicate_dropped
+    )
+    stats['say_containment_duplicate_dropped'] = (
+        containment_duplicate_dropped
+    )
+    stats['say_direct_supported'] = (
+        direct_supported
+    )
+    stats['say_indirect_supported'] = (
+        indirect_supported
+    )
+
+    # Backward-compatible aggregate diagnostic.
+    stats['say_source_supported'] = (
+        direct_supported
+        + indirect_supported
+    )
+
+    return Parsed(
+        records=records,
+        ignored=list(parsed.ignored),
+        quarantined=list(parsed.quarantined),
+        stats=stats,
+        contract_pass=parsed.contract_pass,
+    )
+
+def _replace_say_records(
+    parsed: Parsed,
+    say_parsed: Parsed,
+) -> Parsed:
+    """Authoritatively replace candidate SAY with speech-pass SAY."""
+
+    old_say_count = sum(
+        record.tag == 'SAY'
+        for record in parsed.records
+    )
+
+    records = [
+        record
+        for record in parsed.records
+        if record.tag != 'SAY'
+    ]
+
+    seen = {
+        (
+            record.tag,
+            record.payload,
+            tuple(record.spans),
+            record.epistemic,
+        )
+        for record in records
+    }
+
+    added = 0
+
+    for record in say_parsed.records:
+        if record.tag != 'SAY':
+            continue
+
+        key = (
+            record.tag,
+            record.payload,
+            tuple(record.spans),
+            record.epistemic,
+        )
+
+        if key in seen:
+            continue
+
+        seen.add(key)
+        records.append(record)
+        added += 1
+
+    stats = dict(parsed.stats)
+
+    stats['parsed'] = len(records)
+
+    stats['content_count'] = max(
+        0,
+        parsed.stats.get('content_count', 0)
+        - old_say_count
+        + added,
+    )
+
+    stats['say_replaced_removed'] = old_say_count
+    stats['say_replaced_added'] = added
+    stats['say_conflict_dropped'] = (
+        say_parsed.stats.get(
+            'say_conflict_dropped',
+            0,
+        )
+    )
+
+    return Parsed(
+        records=records,
+        ignored=(
+            list(parsed.ignored)
+            + list(say_parsed.ignored)
+        ),
+        quarantined=(
+            list(parsed.quarantined)
+            + list(say_parsed.quarantined)
+        ),
+        stats=stats,
+        contract_pass=parsed.contract_pass,
+    )
+
+
+DOCUMENT_CONTENT_SYSTEM = """Extract ONLY explicit written content contained in documents or document-like objects in the supplied fiction paragraphs.
+
+DOCUMENTS INCLUDE
+notes, letters, reports, receipts, signs, labels, messages, inscriptions, forms, sheets, tickets, cards, maps, screens, displays, terminals, and similar written or text-bearing artifacts.
+
+OUTPUT
+DET: <document/object label> | <written content> @Pxx
+
+RULES
+- Reply only with DET lines. No other tags, markdown, or commentary.
+- Extract the actual written message/content when it is explicit in the source.
+- Preserve enough content to retain all narratively important clauses.
+- Keep commands, warnings, dates, times, names, identifiers, and destinations when explicitly written.
+- Do not convert written content into SAY.
+- Do not output what a character merely inferred from a document.
+- Do not output actions such as reading, opening, folding, burning, carrying, or placing the document.
+- Do not invent missing wording.
+- If a document exists but its written content is not explicit, emit nothing for it.
+- Preserve the exact @Pxx of the paragraph containing the written content.
+"""
+
+
+def _select_document_content_rows(rows):
+    targets = []
+
+    for row in rows:
+        local_no = int(row['local_no'])
+        text = (row['text'] or '').strip()
+        tok_len = int(row['tok_len'])
+
+        if _is_structural_paragraph(text):
+            continue
+
+        if not text or tok_len <= 0:
+            continue
+
+        # Cheap deterministic prefilter. The LLM still decides
+        # whether actual written content is explicit.
+        if not _DOCUMENT_CUE_RE.search(text):
+            continue
+
+        targets.append({
+            'local_no': local_no,
+            'tok_len': tok_len,
+            'text': text,
+        })
+
+    return targets
+
+
+def _document_content_targets(con, seg_id: str):
+    rows = con.execute(
+        """
+        SELECT ss.local_no, s.tok_len, s.text
+        FROM segment_spans ss
+        JOIN spans s ON s.id=ss.span_id
+        WHERE ss.seg_id=?
+        ORDER BY ss.local_no
+        """,
+        (seg_id,),
+    ).fetchall()
+
+    return _select_document_content_rows(rows)
+
+
+def _build_document_content_messages(targets):
+    fragment = '\n\n'.join(
+        f"[P{x['local_no']:02}] {x['text']}"
+        for x in targets
+    )
+
+    return [
+        {
+            'role': 'system',
+            'content': DOCUMENT_CONTENT_SYSTEM,
+        },
+        {
+            'role': 'user',
+            'content': (
+                "Extract only explicit written document "
+                "content from these paragraphs.\n\n"
+                + fragment
+            ),
+        },
+    ]
+
+
+FAST_REQUIRED_TAGS = {'SUM', 'WHO', 'END'}
+
+
+def _missing_required_tags(parsed) -> set[str]:
+    present = {r.tag for r in parsed.records}
+    return FAST_REQUIRED_TAGS - present
+
+
+def _can_targeted_repair(parsed) -> bool:
+    missing = _missing_required_tags(parsed)
+
+    # parse_output() already quarantines records with bad/missing
+    # provenance. Raw span_validity describes the MODEL OUTPUT,
+    # not the validity of records that survived parsing.
+    #
+    # Therefore a malformed sibling line must not make us throw
+    # away otherwise valid, grounded FAST records.
+    return (
+        bool(missing)
+        and parsed.stats.get('content_count', 0) >= 1
+        and parsed.stats.get('junk_ratio', 1.0) <= .25
+    )
+
+
+SALVAGE_SAFE_TAGS = {
+    'SUM',
+    'WHO',
+    'EV',
+    'SAY',
+    'DET',
+    'Q',
+}
+
+
+def _say_identity(record):
+    if record.tag != 'SAY':
+        return None
+
+    parts = record.payload.split('|', 1)
+
+    if len(parts) != 2:
+        return None
+
+    speaker = norm(parts[0])
+    quote = norm(parts[1].strip().strip('"“”'))
+
+    if not speaker or not quote:
+        return None
+
+    return (
+        tuple(record.spans),
+        quote,
+    ), speaker
+
+
+def _salvage_fast(parsed: Parsed) -> Parsed:
+    """Precision-safe subset of a dirty FAST extraction."""
+
+    speakers_by_quote = {}
+
+    for record in parsed.records:
+        identity = _say_identity(record)
+
+        if identity is None:
+            continue
+
+        key, speaker = identity
+        speakers_by_quote.setdefault(key, set()).add(speaker)
+
+    conflicting_say = {
+        key
+        for key, speakers in speakers_by_quote.items()
+        if len(speakers) > 1
+    }
+
+    records = []
+
+    for record in parsed.records:
+        if record.tag not in SALVAGE_SAFE_TAGS:
+            continue
+
+        if record.tag == 'SAY':
+            identity = _say_identity(record)
+
+            if (
+                identity is not None
+                and identity[0] in conflicting_say
+            ):
+                continue
+
+        records.append(record)
+
+    stats = dict(parsed.stats)
+    stats['parsed'] = len(records)
+
+    return Parsed(
+        records=records,
+        ignored=list(parsed.ignored),
+        quarantined=list(parsed.quarantined),
+        stats=stats,
+        contract_pass=False,
+    )
+
+
+def _repaired_contract_pass(
+    fast_parsed,
+    repair_parsed,
+    candidate,
+) -> bool:
+    candidate_tags = {
+        r.tag
+        for r in candidate.records
+    }
+
+    return (
+        repair_parsed.contract_pass
+        and FAST_REQUIRED_TAGS.issubset(candidate_tags)
+        and candidate.stats.get('content_count', 0) >= 1
+        and fast_parsed.stats.get('junk_ratio', 1.0) <= .25
+    )
+
+
+def analyze_next(book_id: int) -> dict:
+    llama = LlamaClient()
+
+    with tx() as con:
+        seg = con.execute(
+            "SELECT * FROM segments WHERE book_id=? AND status='pending' ORDER BY idx LIMIT 1",
+            (book_id,),
+        ).fetchone()
+
+        if not seg:
+            return {"done": True}
+
+        messages, mapping = build_prompt(con, book_id, seg)
+        end_local_no = _end_local_no(con, seg['id'])
+
+    fast_output, elapsed = _extraction_chat(llama, messages)
+
+    fast_parsed = parse_output(
+        fast_output,
+        set(mapping.keys()),
+        required_end_span=end_local_no,
+    )
+
+    parsed = fast_parsed
+    profile = 'FAST'
+    output = fast_output
+
+    attempts = [{
+        'profile': 'FAST',
+        'contract_pass': fast_parsed.contract_pass,
+        'stats': fast_parsed.stats,
+    }]
+
+    # --------------------------------------------------------
+    # TARGETED CONTRACT REPAIR
+    #
+    # Keep the precision-safe FAST subset. If FAST failed because
+    # required contract tags are missing/quarantined, ask for
+    # exactly those tags and merge them back into FAST.
+    # --------------------------------------------------------
+    if not fast_parsed.contract_pass and _can_targeted_repair(fast_parsed):
+        missing = _missing_required_tags(fast_parsed)
+        allowed_csv = ', '.join(sorted(missing))
+
+        with tx() as con:
+            seg2 = con.execute(
+                "SELECT * FROM segments WHERE id=?",
+                (seg['id'],),
+            ).fetchone()
+
+            repair_messages, _ = build_prompt(
+                con,
+                book_id,
+                seg2,
+                (
+                    "CONTRACT REPAIR ONLY. "
+                    f"MISSING REQUIRED TAGS: {allowed_csv}. "
+                    f"Output ONLY these tags: {allowed_csv}. "
+                    "Do not repeat any other tags or observations. "
+                    "Do not invent. "
+                    "If END is requested, it MUST describe the actual final "
+                    "state in the FINAL SUBSTANTIVE PARAGRAPH, use exactly "
+                    "`present=... | loc=... | situation=...`, and end with "
+                    "the exact @Pxx reference for that final paragraph. "
+                    "If the physical location is not explicit, use `loc=`."
+                ),
+            )
+
+        repair_output, repair_elapsed = _extraction_chat(llama, repair_messages)
+        elapsed += repair_elapsed
+
+        repair_parsed = parse_output(
+            repair_output,
+            set(mapping.keys()),
+            allowed_tags=set(missing),
+            required_tags=set(missing),
+            min_content=0,
+            required_end_span=(
+                end_local_no
+                if 'END' in missing
+                else None
+            ),
+        )
+
+        salvage_parsed = _salvage_fast(
+            fast_parsed,
+        )
+
+        candidate = merge_parsed(
+            [salvage_parsed, repair_parsed],
+            False,
+        )
+
+        repaired_contract = _repaired_contract_pass(
+            fast_parsed,
+            repair_parsed,
+            candidate,
+        )
+
+        candidate = merge_parsed(
+            [salvage_parsed, repair_parsed],
+            repaired_contract,
+        )
+
+        attempts.append({
+            'profile': 'TARGETED-REPAIR',
+            'contract_pass': repair_parsed.contract_pass,
+            'stats': repair_parsed.stats,
+        })
+
+        attempts.append({
+            'profile': 'FAST+REPAIR',
+            'contract_pass': candidate.contract_pass,
+            'stats': candidate.stats,
+        })
+
+        output = (
+            '--- FAST (salvage candidate) ---\n'
+            + fast_output
+            + '\n\n--- TARGETED-REPAIR ---\n'
+            + repair_output
+        )
+
+        parsed = candidate
+
+        if candidate.contract_pass:
+            profile = 'FAST+REPAIR'
+
+    # --------------------------------------------------------
+    # ROBUST-A
+    #
+    # Only if FAST and targeted repair still cannot produce a
+    # valid contract.
+    # --------------------------------------------------------
+    if not parsed.contract_pass:
+        with tx() as con:
+            seg2 = con.execute(
+                "SELECT * FROM segments WHERE id=?",
+                (seg['id'],),
+            ).fetchone()
+
+            m1, _ = build_prompt(
+                con,
+                book_id,
+                seg2,
+                (
+                    'ALLOWED OUTPUT TAGS: SUM, WHO, LOC, TIME, EV, SAY, Q, END. '
+                    'Output ONLY those tags. '
+                    'END is mandatory and must cite the FINAL SUBSTANTIVE PARAGRAPH. '
+                    'Every EV/SAY/Q/END line must end with @Pxx copied from FRAGMENT. '
+                    'Do not write TAG: and never write @NN.'
+                ),
+            )
+
+            m2, _ = build_prompt(
+                con,
+                book_id,
+                seg2,
+                (
+                    'ALLOWED OUTPUT TAGS: ST, KN, REL, DET, TH+, TH-. '
+                    'Output ONLY those tags. Do NOT output END. '
+                    'Every ST/KN/REL/DET line must end with @Pxx copied from FRAGMENT. '
+                    'Do not write TAG: and never write @NN.'
+                ),
+            )
+
+        out1, e1 = _extraction_chat(llama, m1)
+        out2, e2 = _extraction_chat(llama, m2)
+        elapsed += e1 + e2
+
+        pass1_tags = {
+            'SUM', 'WHO', 'LOC', 'TIME',
+            'EV', 'SAY', 'Q', 'END',
+        }
+
+        pass2_tags = {
+            'ST', 'KN', 'REL',
+            'DET', 'TH+', 'TH-',
+        }
+
+        p1 = parse_output(
+            out1,
+            set(mapping.keys()),
+            allowed_tags=pass1_tags,
+            required_tags={'SUM', 'WHO', 'END'},
+            min_content=1,
+            required_end_span=end_local_no,
+        )
+
+        p2 = parse_output(
+            out2,
+            set(mapping.keys()),
+            allowed_tags=pass2_tags,
+            required_tags=set(),
+            min_content=0,
+        )
+
+        robust_parsed = merge_parsed(
+            [p1, p2],
+            p1.contract_pass and p2.contract_pass,
+        )
+
+        attempts.append({
+            'profile': 'ROBUST-A/1',
+            'contract_pass': p1.contract_pass,
+            'stats': p1.stats,
+        })
+
+        attempts.append({
+            'profile': 'ROBUST-A/2',
+            'contract_pass': p2.contract_pass,
+            'stats': p2.stats,
+        })
+
+        attempts.append({
+            'profile': 'ROBUST-A',
+            'contract_pass': robust_parsed.contract_pass,
+            'stats': robust_parsed.stats,
+        })
+
+        output = (
+            output
+            + '\n\n--- ROBUST-A ---\n'
+            + out1.rstrip()
+            + '\n'
+            + out2.lstrip()
+        )
+
+        parsed = robust_parsed
+        profile = 'ROBUST-A'
+
+    # --------------------------------------------------------
+    # ACTION COVERAGE
+    #
+    # A successful contract can still under-extract narrative
+    # actions even in paragraphs that already contain one or more
+    # EV records. Run one independent exhaustive action inventory
+    # over every substantive paragraph.
+    # --------------------------------------------------------
+    if parsed.contract_pass:
+        with tx() as con:
+            coverage_targets = _action_completeness_targets(
+                con,
+                seg['id'],
+            )
+
+        if coverage_targets:
+            coverage_messages = _build_action_coverage_messages(
+                coverage_targets
+            )
+
+            coverage_output, coverage_elapsed = _extraction_chat(llama, 
+                coverage_messages
+            )
+            elapsed += coverage_elapsed
+
+            coverage_target_nos = {
+                x['local_no']
+                for x in coverage_targets
+            }
+
+            coverage_parsed = parse_output(
+                coverage_output,
+                coverage_target_nos,
+                allowed_tags={'EV'},
+                required_tags=set(),
+                min_content=0,
+            )
+
+            coverage_source_by_local_no = {
+                x['local_no']: x['text']
+                for x in coverage_targets
+            }
+
+            coverage_parsed = _sanitize_action_coverage(
+                coverage_parsed,
+                coverage_source_by_local_no,
+                existing=parsed,
+            )
+
+            attempts.append({
+                'profile': 'ACTION-COVERAGE',
+                'contract_pass': coverage_parsed.contract_pass,
+                'stats': coverage_parsed.stats,
+                'targets': [
+                    x['local_no']
+                    for x in coverage_targets
+                ],
+            })
+
+            if coverage_parsed.records:
+                parsed = merge_parsed(
+                    [parsed, coverage_parsed],
+                    True,
+                )
+
+                output = (
+                    output
+                    + '\n\n--- ACTION-COVERAGE ---\n'
+                    + coverage_output
+                )
+
+                profile = profile + '+COVERAGE'
+
+    # --------------------------------------------------------
+    # ACTION GAP AUDIT
+    #
+    # v0.1.20g
+    #
+    # Small omission-focused batches recover low-salience actions
+    # which the first exhaustive ACTION-COVERAGE pass can still
+    # miss on a small local model.
+    #
+    # Every result passes:
+    #   ordinary ACTION sanitizer
+    #   -> GAP-only source-surface repair
+    #   -> novelty firewall
+    #   -> positive source-role firewall
+    #
+    # GAP never weakens the existing precision rules.
+    # --------------------------------------------------------
+    if parsed.contract_pass:
+        with tx() as con:
+            gap_targets = (
+                _action_completeness_targets(
+                    con,
+                    seg['id'],
+                )
+            )
+
+        gap_batches = (
+            _action_gap_batches(
+                gap_targets,
+                batch_size=2,
+            )
+        )
+
+        gap_accepted_any = False
+
+        for gap_batch_no, gap_batch in enumerate(
+            gap_batches,
+            1,
+        ):
+            gap_messages = (
+                _build_action_gap_messages(
+                    gap_batch,
+                    parsed,
+                )
+            )
+
+            (
+                gap_output,
+                gap_elapsed,
+            ) = _extraction_chat(
+                llama,
+                gap_messages,
+            )
+
+            elapsed += gap_elapsed
+
+            gap_target_nos = {
+                x['local_no']
+                for x in gap_batch
+            }
+
+            gap_parsed = parse_output(
+                gap_output,
+                gap_target_nos,
+                allowed_tags={'EV'},
+                required_tags=set(),
+                min_content=0,
+            )
+
+            gap_source_by_local_no = {
+                x['local_no']:
+                    x['text']
+                for x in gap_batch
+            }
+
+            # Reuse every ordinary ACTION precision guard first.
+            gap_parsed = (
+                _sanitize_action_coverage(
+                    gap_parsed,
+                    gap_source_by_local_no,
+                    existing=parsed,
+                )
+            )
+
+            # Then apply the stricter omission-audit firewall.
+            gap_parsed = (
+                _sanitize_action_gap(
+                    gap_parsed,
+                    gap_source_by_local_no,
+                    existing=parsed,
+                )
+            )
+
+            attempts.append({
+                'profile': (
+                    f'ACTION-GAP/{gap_batch_no}'
+                ),
+                'contract_pass': (
+                    gap_parsed.contract_pass
+                ),
+                'stats': gap_parsed.stats,
+                'targets': sorted(
+                    gap_target_nos
+                ),
+            })
+
+            output = (
+                output
+                + (
+                    "\n\n--- ACTION-GAP/"
+                    f"{gap_batch_no} ---\n"
+                )
+                + gap_output
+            )
+
+            if gap_parsed.records:
+                parsed = merge_parsed(
+                    [
+                        parsed,
+                        gap_parsed,
+                    ],
+                    True,
+                )
+
+                gap_accepted_any = True
+
+        if gap_accepted_any:
+            profile = profile + '+GAP'
+
+    # --------------------------------------------------------
+    # SAY COVERAGE
+    #
+    # Speech attribution is independently reconstructed after
+    # FAST / repair / action coverage / ROBUST-A. This pass is
+    # authoritative for SAY: old SAY records are replaced rather
+    # than merged, preventing stale document-as-speech errors from
+    # surviving into the canonical ledger.
+    # --------------------------------------------------------
+    if parsed.contract_pass:
+        with tx() as con:
+            say_source_rows = (
+                _say_segment_source_rows(
+                    con,
+                    seg['id'],
+                )
+            )
+
+            say_targets = (
+                _select_say_coverage_rows(
+                    say_source_rows
+                )
+            )
+
+        if say_targets:
+            say_batches = _say_coverage_batches(
+                say_targets,
+            )
+
+            say_batch_parsed = []
+            say_batch_outputs = []
+            say_provenance_completed = 0
+
+            for batch_index, say_batch in enumerate(
+                say_batches,
+                start=1,
+            ):
+                say_messages = _build_say_coverage_messages(
+                    say_batch,
+                )
+
+                (
+                    batch_output,
+                    batch_elapsed,
+                ) = _extraction_chat(
+                    llama,
+                    say_messages,
+                )
+
+                elapsed += batch_elapsed
+
+                batch_source_by_local_no = {
+                    x['local_no']: x['text']
+                    for x in say_batch
+                }
+
+                (
+                    batch_output,
+                    batch_completed,
+                ) = _repair_say_missing_provenance(
+                    batch_output,
+                    batch_source_by_local_no,
+                )
+
+                say_provenance_completed += (
+                    batch_completed
+                )
+
+                batch_target_nos = {
+                    x['local_no']
+                    for x in say_batch
+                }
+
+                batch_parsed = parse_output(
+                    batch_output,
+                    batch_target_nos,
+                    allowed_tags={'SAY'},
+                    required_tags=set(),
+                    min_content=0,
+                )
+
+                say_batch_parsed.append(
+                    batch_parsed
+                )
+
+                say_batch_outputs.append(
+                    (
+                        batch_index,
+                        [
+                            x['local_no']
+                            for x in say_batch
+                        ],
+                        batch_output,
+                    )
+                )
+
+            if len(say_batch_parsed) == 1:
+                say_parsed = (
+                    say_batch_parsed[0]
+                )
+            else:
+                say_parsed = merge_parsed(
+                    say_batch_parsed,
+                    all(
+                        part.contract_pass
+                        for part in say_batch_parsed
+                    ),
+                )
+
+            # IMPORTANT:
+            # Generation remains restricted to SAY-selected rows,
+            # but deterministic attribution verification receives
+            # the complete segment-local SOURCE map.
+            #
+            # Selection reduces generative attack surface; it must
+            # never hide neighboring source evidence from the
+            # precision verifier.
+            say_source_by_local_no = {
+                int(x['local_no']):
+                    (x['text'] or '')
+                for x in say_source_rows
+            }
+
+            say_parsed = _sanitize_say_coverage(
+                say_parsed,
+                say_source_by_local_no,
+            )
+
+            say_parsed.stats[
+                'say_provenance_completed'
+            ] = say_provenance_completed
+
+            attempts.append({
+                'profile': 'SAY-COVERAGE',
+                'contract_pass': say_parsed.contract_pass,
+                'stats': say_parsed.stats,
+                'targets': [
+                    x['local_no']
+                    for x in say_targets
+                ],
+                'batch_count': len(
+                    say_batches
+                ),
+                'batch_targets': [
+                    [
+                        x['local_no']
+                        for x in batch
+                    ]
+                    for batch in say_batches
+                ],
+            })
+
+            parsed = _replace_say_records(
+                parsed,
+                say_parsed,
+            )
+
+            rendered_batches = []
+
+            for (
+                batch_index,
+                batch_targets,
+                batch_output,
+            ) in say_batch_outputs:
+                rendered_batches.append(
+                    (
+                        f"--- SAY BATCH "
+                        f"{batch_index} "
+                        f"{batch_targets} ---\n"
+                        f"{batch_output}"
+                    )
+                )
+
+            output = (
+                output
+                + '\n\n--- SAY-COVERAGE ---\n'
+                + '\n\n'.join(
+                    rendered_batches
+                )
+            )
+
+            profile = profile + '+SAY'
+
+    # --------------------------------------------------------
+    # DOCUMENT CONTENT
+    #
+    # Independent coverage for explicit written messages.
+    # This pass owns only DET and therefore cannot turn written
+    # material into speech or interfere with action extraction.
+    # --------------------------------------------------------
+    if parsed.contract_pass:
+        with tx() as con:
+            document_targets = _document_content_targets(
+                con,
+                seg['id'],
+            )
+
+        if document_targets:
+            document_messages = (
+                _build_document_content_messages(
+                    document_targets,
+                )
+            )
+
+            document_output, document_elapsed = (
+                _extraction_chat(
+                    llama,
+                    document_messages,
+                )
+            )
+
+            elapsed += document_elapsed
+
+            document_target_nos = {
+                x['local_no']
+                for x in document_targets
+            }
+
+            document_parsed = parse_output(
+                document_output,
+                document_target_nos,
+                allowed_tags={'DET'},
+                required_tags=set(),
+                min_content=0,
+            )
+
+            attempts.append({
+                'profile': 'DOCUMENT-CONTENT',
+                'contract_pass': (
+                    document_parsed.contract_pass
+                ),
+                'stats': document_parsed.stats,
+                'targets': [
+                    x['local_no']
+                    for x in document_targets
+                ],
+            })
+
+            if document_parsed.records:
+                parsed = merge_parsed(
+                    [
+                        parsed,
+                        document_parsed,
+                    ],
+                    parsed.contract_pass,
+                )
+
+                output = (
+                    output
+                    + '\n\n--- DOCUMENT-CONTENT ---\n'
+                    + document_output
+                )
+
+                profile = profile + '+DOC'
+
+    with tx() as con:
+        seg = con.execute(
+            "SELECT * FROM segments WHERE id=?",
+            (seg['id'],),
+        ).fetchone()
+
+        for raw, reason in parsed.quarantined:
+            con.execute(
+                "INSERT INTO quarantine(seg_id,raw,reason) VALUES(?,?,?)",
+                (seg['id'], raw, reason),
+            )
+
+        if parsed.contract_pass:
+            apply_parsed(
+                con,
+                book_id,
+                seg,
+                parsed,
+                mapping,
+            )
+
+            con.execute(
+                "UPDATE segments SET status='done' WHERE id=?",
+                (seg['id'],),
+            )
+        else:
+            con.execute(
+                "UPDATE segments SET status='needs_review' WHERE id=?",
+                (seg['id'],),
+            )
+
+        density = (
+            parsed.stats['content_count']
+            / max(.001, seg['tok_len'] / 1000)
+        )
+
+        con.execute(
+            """
+            INSERT INTO run_log(
+                seg_id,profile,model,reasoning,
+                parsed,ignored,quarantined,no_span,
+                density,span_validity,contract_pass,elapsed
+            )
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?)
+            """,
+            (
+                seg['id'],
+                profile,
+                llama.model_name(),
+                'low',
+                parsed.stats['parsed'],
+                parsed.stats['ignored'],
+                parsed.stats['quarantined'],
+                parsed.stats['no_span'],
+                density,
+                parsed.stats['span_validity'],
+                1 if parsed.contract_pass else 0,
+                elapsed,
+            ),
+        )
+
+        return {
+            "done": False,
+            "segment": seg['id'],
+            "profile": profile,
+            "contract_pass": parsed.contract_pass,
+            "stats": parsed.stats,
+            "attempts": attempts,
+            "density": density,
+            "elapsed": elapsed,
+            "output": output,
+        }

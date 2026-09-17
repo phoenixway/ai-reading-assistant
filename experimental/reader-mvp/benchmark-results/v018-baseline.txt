@@ -1,0 +1,36 @@
+=== NARRATIVE MEMORY BENCHMARK ===
+suite_id: suite-1789575535311953779
+prompt_sha256: 528ce83dfe208d1551b71547e6cef16c3051971570c81331e9efc0bdc83f4ce0
+fixtures: 5
+
+CASE                      PROFILE                    SEM GRD FORB END ALL SEC
+b17-baseline              FAST+REPAIR+COVERAGE       0.762 0.762 0.929 0.667 0.786 9.23
+coreference-handoff       ROBUST-A                   0.167 0.167 1.000 0.750 0.392 13.51
+document-vs-speech        FAST+COVERAGE              0.750 0.750 1.000 1.000 0.825 5.48
+end-location              FAST                       0.778 0.556 1.000 0.750 0.719 4.05
+hedged-perception         FAST+COVERAGE              0.700 0.700 1.000 0.750 0.765 4.79
+
+=== MACRO ===
+semantic_coverage: 0.631
+grounded_coverage: 0.587
+forbidden_pass: 0.986
+end_pass: 0.783
+overall: 0.697
+elapsed_total: 37.06s
+
+=== FAILURES ===
+[b17-baseline]
+  required: mara-reads-note, mara-burns-note, mara-keeps-receipt
+  forbidden: document-text-promoted-to-say
+  end: loc_not_object
+[coreference-handoff]
+  required: olek-picks-key, olek-wraps-key, olek-pockets-key, olek-locks-drawer, olek-hands-petro-key, olek-give-only-nadia, petro-hides-key
+  end: situation
+[document-vs-speech]
+  required: jonas-gives-clipboard, mira-call-dena-speech
+[end-location]
+  required: bruno-leaves-workshop, ada-writes-pump-belt
+  end: situation
+[hedged-perception]
+  required: keva-checks-handle, keva-waits, keva-places-bag
+  end: situation

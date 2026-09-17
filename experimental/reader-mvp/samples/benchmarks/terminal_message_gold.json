@@ -1,0 +1,131 @@
+{
+  "fixture": "Generalization terminal display story",
+  "story": "benchmarks/terminal_message_story.txt",
+  "case": "gen-terminal-message",
+  "focus": [
+    "written-content",
+    "screen-vs-speech",
+    "negated-speech",
+    "end-location"
+  ],
+  "segment_idx": 1,
+  "notes": "Tests written screen text, spoken summary, and explicit statement that screen text was not read aloud.",
+  "required": [
+    {
+      "id": "terminal-warning-content",
+      "weight": 2,
+      "tags": [
+        "DET",
+        "Q"
+      ],
+      "p": 2,
+      "patterns": [
+        "pump array",
+        "offline",
+        "manual reset"
+      ]
+    },
+    {
+      "id": "jun-copies-code",
+      "weight": 2,
+      "tags": [
+        "EV"
+      ],
+      "p": 2,
+      "patterns": [
+        "jun",
+        "cop",
+        "x9-14",
+        "paper"
+      ]
+    },
+    {
+      "id": "jun-pumps-down-speech",
+      "weight": 2,
+      "tags": [
+        "SAY"
+      ],
+      "p": 3,
+      "patterns": [
+        "jun",
+        "pumps",
+        "down"
+      ]
+    },
+    {
+      "id": "jun-shuts-terminal",
+      "weight": 1,
+      "tags": [
+        "EV"
+      ],
+      "p": 4,
+      "patterns": [
+        "jun",
+        "shut",
+        "terminal"
+      ]
+    },
+    {
+      "id": "jun-pockets-paper",
+      "weight": 1,
+      "tags": [
+        "EV"
+      ],
+      "p": 4,
+      "patterns": [
+        "jun",
+        "pocket",
+        "paper"
+      ]
+    }
+  ],
+  "forbidden": [
+    {
+      "id": "display-promoted-to-say",
+      "tags": [
+        "SAY"
+      ],
+      "patterns": [
+        "pump array",
+        "offline",
+        "manual reset"
+      ]
+    },
+    {
+      "id": "negated-read-aloud-promoted",
+      "tags": [
+        "SAY"
+      ],
+      "patterns": [
+        "jun",
+        "manual reset"
+      ]
+    },
+    {
+      "id": "wrong-speaker-pumps-down",
+      "tags": [
+        "SAY"
+      ],
+      "patterns": [
+        "selene",
+        "pumps",
+        "down"
+      ]
+    }
+  ],
+  "end": {
+    "present_patterns": [
+      "jun"
+    ],
+    "situation_patterns": [
+      "terminal",
+      "paper"
+    ],
+    "loc_patterns": [
+      "operations bay"
+    ],
+    "forbidden_loc_patterns": [
+      "pump room"
+    ]
+  }
+}

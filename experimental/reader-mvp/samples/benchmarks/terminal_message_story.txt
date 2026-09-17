@@ -1,0 +1,7 @@
+CHAPTER 1
+
+At 06:40 Jun woke the wall terminal. Its display flashed: “Pump array offline. Manual reset required.” Jun copied fault code X9-14 onto scrap paper.
+
+Selene entered the operations bay and asked what happened. Jun answered, “The pumps are down.” He left the display untouched and did not read its warning aloud.
+
+Jun shut the terminal, pocketed the paper, and remained in the operations bay while Selene went to the pump room.

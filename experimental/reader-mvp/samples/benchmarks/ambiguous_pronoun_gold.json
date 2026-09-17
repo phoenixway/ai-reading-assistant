@@ -1,0 +1,101 @@
+{
+  "fixture": "Generalization ambiguous pronoun story",
+  "story": "benchmarks/ambiguous_pronoun_story.txt",
+  "case": "gen-ambiguous-pronoun",
+  "focus": [
+    "ambiguous-coreference",
+    "abstention",
+    "pronoun-preservation",
+    "end-location"
+  ],
+  "segment_idx": 1,
+  "notes": "The first 'He nodded' is intentionally ambiguous between Marek and Pavel. Memory must not invent a named antecedent.",
+  "required": [
+    {
+      "id": "ambiguous-he-nods",
+      "weight": 2,
+      "tags": [
+        "EV"
+      ],
+      "p": 2,
+      "patterns": [
+        "\\bhe\\b",
+        "\\bnod"
+      ]
+    },
+    {
+      "id": "pavel-enters-booth",
+      "weight": 1,
+      "tags": [
+        "EV"
+      ],
+      "p": 3,
+      "patterns": [
+        "pavel",
+        "enter",
+        "ticket booth"
+      ]
+    },
+    {
+      "id": "marek-opens-ledger",
+      "weight": 1,
+      "tags": [
+        "EV"
+      ],
+      "p": 4,
+      "patterns": [
+        "marek",
+        "open",
+        "ledger"
+      ]
+    },
+    {
+      "id": "marek-marks-time",
+      "weight": 1,
+      "tags": [
+        "EV"
+      ],
+      "p": 4,
+      "patterns": [
+        "marek",
+        "mark",
+        "time"
+      ]
+    }
+  ],
+  "forbidden": [
+    {
+      "id": "invented-marek-nods",
+      "tags": [
+        "EV"
+      ],
+      "patterns": [
+        "^marek\\b.*\\bnod"
+      ]
+    },
+    {
+      "id": "invented-pavel-nods",
+      "tags": [
+        "EV"
+      ],
+      "patterns": [
+        "^pavel\\b.*\\bnod"
+      ]
+    }
+  ],
+  "end": {
+    "present_patterns": [
+      "marek"
+    ],
+    "situation_patterns": [
+      "ledger",
+      "open"
+    ],
+    "loc_patterns": [
+      "gate"
+    ],
+    "forbidden_loc_patterns": [
+      "ticket booth"
+    ]
+  }
+}
