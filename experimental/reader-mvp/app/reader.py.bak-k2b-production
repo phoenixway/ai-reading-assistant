@@ -8082,301 +8082,9 @@ def _dedupe_say_contained_records(
     )
 
 
-
-def _say_boundary_leading_run_nos(
-    source_by_local_no: dict[int, str],
-) -> set[int]:
-    """
-    Return the CLOSED direct-quote run that begins at the very first
-    paragraph of the current segment.
-
-    k2b v1 is deliberately narrow:
-
-        P01  "open continuation ...
-        P02  "final continuation."
-
-    Every run paragraph must:
-    - be consecutive;
-    - begin with quote punctuation;
-    - contain exactly one opening quote while still open,
-      or exactly opening+closing quote at the end.
-
-    The run must close inside this segment.
-    """
-
-    if not source_by_local_no:
-        return set()
-
-    current_no = min(source_by_local_no)
-    run_nos = set()
-
-    while current_no in source_by_local_no:
-        text = (
-            source_by_local_no.get(
-                current_no,
-                '',
-            )
-            or ''
-        ).strip()
-
-        if not text:
-            return set()
-
-        if _SAY_RUN_STARTS_QUOTE_RE.match(
-            text
-        ) is None:
-            return set()
-
-        quote_count = len(
-            _SAY_RUN_QUOTE_RE.findall(
-                text
-            )
-        )
-
-        # Precision-first old-style paragraph geometry.
-        if quote_count not in {1, 2}:
-            return set()
-
-        run_nos.add(
-            current_no
-        )
-
-        if quote_count == 2:
-            return run_nos
-
-        current_no += 1
-
-    # Do not propagate an unresolved/open capability through yet
-    # another segment in k2b v1.
-    return set()
-
-
-def _say_boundary_supports_record(
-    record: Record,
-    source_by_local_no: dict[int, str],
-    boundary_speaker: str | None,
-) -> bool:
-    """
-    Positive cross-segment direct-speech evidence for one record.
-
-    `boundary_speaker` has already been SOURCE-proven by
-    _say_cross_segment_open_run_seed().
-
-    This helper only verifies that THIS record belongs to the
-    current segment's leading continuation run.
-    """
-
-    boundary_speaker = (
-        boundary_speaker
-        or ''
-    ).strip()
-
-    if (
-        record.tag != 'SAY'
-        or not boundary_speaker
-        or len(record.spans) != 1
-    ):
-        return False
-
-    parts = _say_parts(
-        record
-    )
-
-    if parts is None:
-        return False
-
-    speaker, content = parts
-
-    if (
-        speaker.casefold()
-        != boundary_speaker.casefold()
-    ):
-        return False
-
-    local_no = int(
-        record.spans[0]
-    )
-
-    run_nos = (
-        _say_boundary_leading_run_nos(
-            source_by_local_no
-        )
-    )
-
-    if local_no not in run_nos:
-        return False
-
-    text = (
-        source_by_local_no.get(
-            local_no,
-            '',
-        )
-        or ''
-    )
-
-    bounds = _say_content_bounds(
-        text,
-        content,
-    )
-
-    if bounds is None:
-        return False
-
-    if not _say_run_bounds_start_inside_quote(
-        text,
-        bounds,
-    ):
-        return False
-
-    if _say_crosses_direct_quote_surface(
-        record,
-        source_by_local_no,
-    ):
-        return False
-
-    return True
-
-
-def _repair_say_boundary_speakers(
-    records: list[Record],
-    source_by_local_no: dict[int, str],
-    boundary_speaker: str | None,
-) -> tuple[list[Record], int]:
-    """
-    Rewrite weak-model speaker proposals only inside the current
-    segment's leading quote continuation run.
-
-    The candidate speaker itself is not inferred here.
-    It arrives as a SOURCE-proven cross-segment capability.
-
-    Explicit multi-speaker conflicts are left to the ordinary
-    downstream conflict resolver.
-    """
-
-    boundary_speaker = (
-        boundary_speaker
-        or ''
-    ).strip()
-
-    if not boundary_speaker:
-        return list(records), 0
-
-    run_nos = (
-        _say_boundary_leading_run_nos(
-            source_by_local_no
-        )
-    )
-
-    if not run_nos:
-        return list(records), 0
-
-    proposed_speakers_by_key = {}
-
-    for record in records:
-        identity = _say_identity(
-            record
-        )
-
-        if identity is None:
-            continue
-
-        key, speaker = identity
-
-        proposed_speakers_by_key.setdefault(
-            key,
-            set(),
-        ).add(
-            speaker
-        )
-
-    repaired = []
-    rewritten = 0
-
-    for record in records:
-        if record.tag != 'SAY':
-            repaired.append(record)
-            continue
-
-        if (
-            len(record.spans) != 1
-            or int(record.spans[0]) not in run_nos
-        ):
-            repaired.append(record)
-            continue
-
-        identity = _say_identity(
-            record
-        )
-
-        if identity is not None:
-            key, _speaker = identity
-
-            if len(
-                proposed_speakers_by_key.get(
-                    key,
-                    set(),
-                )
-            ) > 1:
-                repaired.append(record)
-                continue
-
-        current_evidence = (
-            _say_source_evidence(
-                record,
-                source_by_local_no,
-            )
-        )
-
-        # Never overwrite something already positively classified.
-        if current_evidence != 'unknown':
-            repaired.append(record)
-            continue
-
-        parts = _say_parts(
-            record
-        )
-
-        if parts is None:
-            repaired.append(record)
-            continue
-
-        proposed_speaker, _content = parts
-
-        # Already canonical. Evidence will be supplied by
-        # _say_boundary_supports_record below.
-        if (
-            proposed_speaker.casefold()
-            == boundary_speaker.casefold()
-        ):
-            repaired.append(record)
-            continue
-
-        probe = _say_replace_speaker(
-            record,
-            boundary_speaker,
-        )
-
-        if not _say_boundary_supports_record(
-            probe,
-            source_by_local_no,
-            boundary_speaker,
-        ):
-            repaired.append(record)
-            continue
-
-        repaired.append(
-            probe
-        )
-
-        rewritten += 1
-
-    return repaired, rewritten
-
-
 def _sanitize_say_coverage(
     parsed: Parsed,
     source_by_local_no: dict[int, str] | None = None,
-    boundary_speaker: str | None = None,
 ) -> Parsed:
     """
     Precision-first source-aware SAY verifier.
@@ -8520,15 +8228,6 @@ def _sanitize_say_coverage(
         source_by_local_no,
     )
 
-    (
-        repaired_records,
-        boundary_speaker_rewritten,
-    ) = _repair_say_boundary_speakers(
-        repaired_records,
-        source_by_local_no,
-        boundary_speaker,
-    )
-
     groups = {}
 
     for record in repaired_records:
@@ -8559,42 +8258,17 @@ def _sanitize_say_coverage(
                 record,
                 source_by_local_no,
             )
-            and not _say_boundary_supports_record(
-                record,
-                source_by_local_no,
-                boundary_speaker,
-            )
         )
     }
 
-    evidence_by_id = {}
-    boundary_supported_ids = set()
-
-    for record in repaired_records:
-        if record.tag != 'SAY':
-            continue
-
-        evidence = _say_source_evidence(
+    evidence_by_id = {
+        id(record): _say_source_evidence(
             record,
             source_by_local_no,
         )
-
-        if (
-            evidence == 'unknown'
-            and _say_boundary_supports_record(
-                record,
-                source_by_local_no,
-                boundary_speaker,
-            )
-        ):
-            evidence = 'spoken'
-            boundary_supported_ids.add(
-                id(record)
-            )
-
-        evidence_by_id[
-            id(record)
-        ] = evidence
+        for record in repaired_records
+        if record.tag == 'SAY'
+    }
 
     mixed_surface_ids = {
         id(record)
@@ -8795,13 +8469,6 @@ def _sanitize_say_coverage(
     )
     stats['say_speaker_rewritten'] = (
         speaker_rewritten
-    )
-
-    stats['say_boundary_speaker_rewritten'] = (
-        boundary_speaker_rewritten
-    )
-    stats['say_boundary_direct_supported'] = (
-        len(boundary_supported_ids)
     )
     stats['say_conflict_dropped'] = (
         conflict_dropped
@@ -9596,65 +9263,6 @@ def analyze_next(book_id: int) -> dict:
                 )
             )
 
-            say_source_by_local_no = {
-                int(x['local_no']):
-                    (x['text'] or '')
-                for x in say_source_rows
-            }
-
-            say_boundary_speaker = None
-
-            current_segment_meta = con.execute(
-                """
-                SELECT book_id, idx, chapter
-                FROM segments
-                WHERE id=?
-                """,
-                (seg['id'],),
-            ).fetchone()
-
-            if (
-                current_segment_meta is not None
-                and int(current_segment_meta['idx']) > 1
-            ):
-                previous_segment_meta = con.execute(
-                    """
-                    SELECT id, chapter
-                    FROM segments
-                    WHERE book_id=?
-                      AND idx=?
-                    """,
-                    (
-                        current_segment_meta['book_id'],
-                        int(current_segment_meta['idx']) - 1,
-                    ),
-                ).fetchone()
-
-                if previous_segment_meta is not None:
-                    previous_source_rows = list(
-                        _say_segment_source_rows(
-                            con,
-                            previous_segment_meta['id'],
-                        )
-                    )
-
-                    previous_source_by_local_no = {
-                        int(x['local_no']):
-                            (x['text'] or '')
-                        for x in previous_source_rows
-                    }
-
-                    say_boundary_speaker = (
-                        _say_cross_segment_open_run_seed(
-                            previous_source_by_local_no,
-                            say_source_by_local_no,
-                            same_chapter=(
-                                previous_segment_meta['chapter']
-                                == current_segment_meta['chapter']
-                            ),
-                        )
-                    )
-
         if say_targets:
             say_batches = _say_coverage_batches(
                 say_targets,
@@ -9757,7 +9365,6 @@ def analyze_next(book_id: int) -> dict:
             say_parsed = _sanitize_say_coverage(
                 say_parsed,
                 say_source_by_local_no,
-                boundary_speaker=say_boundary_speaker,
             )
 
             say_parsed.stats[

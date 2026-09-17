@@ -2577,7 +2577,7 @@ def test_say_old_style_open_paragraph_does_not_cross_surface():
     )
 
 
-def test_sanitizer_drops_mixed_direct_speech_surface():
+def test_sanitizer_salvages_mixed_direct_speech_surface():
     from app.protocol import Parsed
     from app.reader import (
         _sanitize_say_coverage,
@@ -2612,15 +2612,74 @@ def test_sanitizer_drops_mixed_direct_speech_surface():
         sources,
     )
 
-    assert clean.records == []
+    assert [
+        record.payload
+        for record in clean.records
+    ] == [
+        'Mira | This,',
+        'Mira | is the room of correction.',
+    ]
 
-    assert clean.stats[
-        "say_mixed_surface_dropped"
-    ] == 1
+    assert [
+        record.spans
+        for record in clean.records
+    ] == [
+        [1],
+        [1],
+    ]
 
-    assert clean.stats[
-        "say_source_supported"
-    ] == 0
+    assert (
+        clean.stats[
+            'say_mixed_surface_salvaged'
+        ]
+        == 1
+    )
+
+    assert (
+        clean.stats[
+            'say_mixed_surface_salvaged_fragments'
+        ]
+        == 2
+    )
+
+    # j1 replaced the original mixed observation with clean
+    # direct-speech SOURCE fragments before h1.
+    assert (
+        clean.stats[
+            'say_mixed_surface_dropped'
+        ]
+        == 0
+    )
+
+    # Both projected fragments survive ordinary spoken-source
+    # verification.
+    assert (
+        clean.stats[
+            'say_direct_supported'
+        ]
+        == 2
+    )
+
+    assert (
+        clean.stats[
+            'say_indirect_supported'
+        ]
+        == 0
+    )
+
+    assert (
+        clean.stats[
+            'say_source_supported'
+        ]
+        == 2
+    )
+
+    assert (
+        clean.stats[
+            'say_unsupported_dropped'
+        ]
+        == 0
+    )
 
 
 def test_run_speaker_repair_does_not_rewrite_mixed_surface():
@@ -2916,3 +2975,655 @@ def test_say_containment_dedupe_handles_nested_quoted_words():
 
     assert dropped == 1
     assert len(clean) == 1
+
+
+def test_previous_pronoun_chain_anchor_positive():
+    from app.reader import (
+        _say_run_candidate_previous_pronoun_chain_anchor,
+    )
+
+    previous = (
+        "Let it be understood that Mira was forced "
+        "into an arrangement she disliked. "
+        "She was almost compelled, through Rowan's "
+        "interference, to accept it. "
+        "All she could now do was answer him."
+    )
+
+    current = (
+        '"Sir and husband," she said, '
+        '"you have summoned me here.'
+    )
+
+    assert (
+        _say_run_candidate_previous_pronoun_chain_anchor(
+            previous,
+            current,
+            "Mira",
+        )
+    )
+
+
+def test_previous_pronoun_chain_anchor_is_candidate_conditioned():
+    from app.reader import (
+        _say_run_candidate_previous_pronoun_chain_anchor,
+    )
+
+    previous = (
+        "Let it be understood that Mira was forced "
+        "into an arrangement she disliked. "
+        "She was almost compelled, through Rowan's "
+        "interference, to accept it. "
+        "All she could now do was answer him."
+    )
+
+    current = (
+        '"Sir and husband," she said, '
+        '"you have summoned me here.'
+    )
+
+    assert not (
+        _say_run_candidate_previous_pronoun_chain_anchor(
+            previous,
+            current,
+            "Rowan",
+        )
+    )
+
+
+def test_previous_pronoun_chain_anchor_requires_same_bridge_pronoun():
+    from app.reader import (
+        _say_run_candidate_previous_pronoun_chain_anchor,
+    )
+
+    previous = (
+        "Let it be understood that Mira was forced "
+        "into an arrangement she disliked. "
+        "He was almost compelled to accept it. "
+        "All she could now do was answer him."
+    )
+
+    current = (
+        '"Sir and husband," she said, '
+        '"you have summoned me here.'
+    )
+
+    assert not (
+        _say_run_candidate_previous_pronoun_chain_anchor(
+            previous,
+            current,
+            "Mira",
+        )
+    )
+
+
+def test_previous_pronoun_chain_anchor_requires_same_terminal_pronoun():
+    from app.reader import (
+        _say_run_candidate_previous_pronoun_chain_anchor,
+    )
+
+    previous = (
+        "Let it be understood that Mira was forced "
+        "into an arrangement she disliked. "
+        "She was almost compelled to accept it. "
+        "All he could now do was answer."
+    )
+
+    current = (
+        '"Sir and husband," she said, '
+        '"you have summoned me here.'
+    )
+
+    assert not (
+        _say_run_candidate_previous_pronoun_chain_anchor(
+            previous,
+            current,
+            "Mira",
+        )
+    )
+
+
+def test_previous_pronoun_chain_anchor_requires_current_same_pronoun():
+    from app.reader import (
+        _say_run_candidate_previous_pronoun_chain_anchor,
+    )
+
+    previous = (
+        "Let it be understood that Mira was forced "
+        "into an arrangement she disliked. "
+        "She was almost compelled to accept it. "
+        "All she could now do was answer."
+    )
+
+    current = (
+        '"Sir and husband," he said, '
+        '"you have summoned me here.'
+    )
+
+    assert not (
+        _say_run_candidate_previous_pronoun_chain_anchor(
+            previous,
+            current,
+            "Mira",
+        )
+    )
+
+
+def test_previous_pronoun_chain_anchor_rejects_coordinated_candidate():
+    from app.reader import (
+        _say_run_candidate_previous_pronoun_chain_anchor,
+    )
+
+    previous = (
+        "Marek and Pavel were forced to stay. "
+        "He was almost compelled to agree. "
+        "All he could now do was answer."
+    )
+
+    current = (
+        '"Very well," he said, '
+        '"I shall remain.'
+    )
+
+    assert not (
+        _say_run_candidate_previous_pronoun_chain_anchor(
+            previous,
+            current,
+            "Pavel",
+        )
+    )
+
+
+def test_previous_pronoun_chain_anchor_does_not_use_name_gender():
+    from app.reader import (
+        _say_run_candidate_previous_pronoun_chain_anchor,
+    )
+
+    previous = (
+        "It was understood that Alex was forced "
+        "to remain. "
+        "She was almost compelled to agree. "
+        "All she could now do was answer."
+    )
+
+    current = (
+        '"Very well," she said, '
+        '"I shall remain.'
+    )
+
+    # Positive by literal structural chain alone.
+    # No Alex -> she gender knowledge exists or is required.
+    assert (
+        _say_run_candidate_previous_pronoun_chain_anchor(
+            previous,
+            current,
+            "Alex",
+        )
+    )
+
+
+def test_previous_pronoun_chain_anchor_allows_embedded_other_name():
+    from app.reader import (
+        _say_run_candidate_previous_pronoun_chain_anchor,
+    )
+
+    previous = (
+        "It was understood that Mira was forced "
+        "to remain. "
+        "She was almost compelled, through Rowan's "
+        "interference, to agree. "
+        "All she could now do was answer."
+    )
+
+    current = (
+        '"Very well," she said, '
+        '"I shall remain.'
+    )
+
+    assert (
+        _say_run_candidate_previous_pronoun_chain_anchor(
+            previous,
+            current,
+            "Mira",
+        )
+    )
+
+
+def test_previous_pronoun_chain_anchor_opens_speech_run():
+    from app.protocol import Record
+    from app.reader import (
+        _source_supports_speaker_run,
+    )
+
+    sources = {
+        1: (
+            "It was understood that Mira was forced "
+            "to remain. "
+            "She was almost compelled to agree. "
+            "All she could now do was answer."
+        ),
+        2: (
+            '"Very well," she said, '
+            '"I shall explain everything.'
+        ),
+        3: (
+            '"The second part follows.'
+        ),
+        4: (
+            '"And this concludes the answer."'
+        ),
+    }
+
+    for local_no, content in [
+        (
+            2,
+            "I shall explain everything.",
+        ),
+        (
+            3,
+            "The second part follows.",
+        ),
+        (
+            4,
+            "And this concludes the answer.",
+        ),
+    ]:
+        record = Record(
+            tag="SAY",
+            payload=(
+                f"Mira | {content}"
+            ),
+            spans=[local_no],
+            epistemic=None,
+            raw="",
+        )
+
+        assert _source_supports_speaker_run(
+            record,
+            sources,
+            "Mira",
+            content,
+        )
+
+
+def test_say_run_subject_candidates_keeps_full_multiword_surface():
+    from app.reader import (
+        _say_run_subject_candidates,
+    )
+
+    sentence = (
+        "Let it be thoroughly understood that "
+        "Lady Dunfern was forced into a union."
+    )
+
+    assert _say_run_subject_candidates(
+        sentence
+    ) == [
+        "Lady Dunfern",
+    ]
+
+
+def test_say_run_subject_candidates_single_name():
+    from app.reader import (
+        _say_run_subject_candidates,
+    )
+
+    sentence = (
+        "At this stage Irene began to reconsider."
+    )
+
+    assert _say_run_subject_candidates(
+        sentence
+    ) == [
+        "Irene",
+    ]
+
+
+def test_say_run_subject_candidates_does_not_emit_name_fragments():
+    from app.reader import (
+        _say_run_subject_candidates,
+    )
+
+    sentence = (
+        "Lady Dunfern was forced to remain."
+    )
+
+    candidates = _say_run_subject_candidates(
+        sentence
+    )
+
+    assert candidates == [
+        "Lady Dunfern",
+    ]
+
+    assert "Lady" not in candidates
+    assert "Dunfern" not in candidates
+
+
+def test_source_run_seed_discovers_unique_i1_candidate():
+    from app.reader import (
+        _say_source_run_seed_speakers,
+    )
+
+    sources = {
+        1: (
+            "Let it be understood that Mira was forced "
+            "to remain. "
+            "She was almost compelled, through Rowan's "
+            "interference, to agree. "
+            "All she could now do was answer."
+        ),
+        2: (
+            '"Very well," she said, '
+            '"I shall explain everything.'
+        ),
+        3: (
+            '"The explanation continues.'
+        ),
+    }
+
+    assert _say_source_run_seed_speakers(
+        sources
+    ) == {
+        "Mira",
+    }
+
+
+def test_source_run_seed_uses_full_title_name():
+    from app.reader import (
+        _say_source_run_seed_speakers,
+    )
+
+    sources = {
+        1: (
+            "Let it be understood that Lady Dunfern was forced "
+            "to remain. "
+            "She was almost compelled, through Lady Dilworth's "
+            "interference, to agree. "
+            "All she could now do was answer."
+        ),
+        2: (
+            '"Sir and husband," she said, '
+            '"you have summoned me here.'
+        ),
+    }
+
+    seeds = _say_source_run_seed_speakers(
+        sources
+    )
+
+    assert seeds == {
+        "Lady Dunfern",
+    }
+
+    assert "Lady" not in seeds
+    assert "Dunfern" not in seeds
+    assert "Lady Dilworth" not in seeds
+
+
+def test_source_run_seed_abstains_when_two_candidates_validate():
+    from app.reader import (
+        _say_source_run_seed_speakers,
+    )
+
+    sources = {
+        1: (
+            "Mira was required to stay while Rowan was "
+            "required to remain. "
+            "She was almost compelled to agree. "
+            "All she could now do was answer."
+        ),
+        2: (
+            '"Very well," she said, '
+            '"I shall remain.'
+        ),
+    }
+
+    # Both Mira and Rowan satisfy the deliberately weak surface
+    # relation to the same pronoun chain. SOURCE therefore must
+    # abstain rather than choose.
+    assert _say_source_run_seed_speakers(
+        sources
+    ) == set()
+
+
+def test_run_speaker_repair_can_use_source_seed_without_model_seed():
+    from app.reader import (
+        _repair_say_run_speakers,
+    )
+
+    sources = {
+        1: (
+            "Let it be understood that Mira was forced "
+            "to remain. "
+            "She was almost compelled to agree. "
+            "All she could now do was answer."
+        ),
+        2: (
+            '"Very well," she said, '
+            '"I shall explain everything.'
+        ),
+        3: (
+            '"The explanation continues.'
+        ),
+    }
+
+    # Model never proposes Mira at all.
+    records = [
+        _say_record(
+            "Rowan",
+            "I shall explain everything.",
+            2,
+        ),
+        _say_record(
+            "Jonas",
+            "The explanation continues.",
+            3,
+        ),
+    ]
+
+    repaired, rewritten = (
+        _repair_say_run_speakers(
+            records,
+            sources,
+        )
+    )
+
+    assert rewritten == 2
+
+    assert all(
+        record.payload.startswith(
+            "Mira |"
+        )
+        for record in repaired
+    )
+
+
+def test_source_seed_repair_still_abstains_on_multi_speaker_same_observation():
+    from app.reader import (
+        _repair_say_run_speakers,
+    )
+
+    sources = {
+        1: (
+            "Let it be understood that Mira was forced "
+            "to remain. "
+            "She was almost compelled to agree. "
+            "All she could now do was answer."
+        ),
+        2: (
+            '"Very well," she said, '
+            '"I shall explain everything.'
+        ),
+    }
+
+    records = [
+        _say_record(
+            "Rowan",
+            "I shall explain everything.",
+            2,
+        ),
+        _say_record(
+            "Jonas",
+            "I shall explain everything.",
+            2,
+        ),
+    ]
+
+    repaired, rewritten = (
+        _repair_say_run_speakers(
+            records,
+            sources,
+        )
+    )
+
+    # g1 conflict ownership remains intact.
+    assert rewritten == 0
+
+    assert {
+        record.payload.split(
+            "|",
+            1,
+        )[0].strip()
+        for record in repaired
+    } == {
+        "Rowan",
+        "Jonas",
+    }
+
+
+
+# ------------------------------------------------------------------
+# SAY v0.1.20h-j1
+# Mixed spoken/narrator/spoken SOURCE projection.
+# ------------------------------------------------------------------
+
+def test_say_j1_projects_mixed_candidate_onto_exact_spoken_surfaces():
+    from app.reader import (
+        Record,
+        _salvage_say_mixed_quote_surface,
+        _say_crosses_direct_quote_surface,
+    )
+
+    source_by_local_no = {
+        1: (
+            '"Sir and husband," she said, with great nervousness '
+            'at first, "you have summoned me hither to answer."'
+        ),
+    }
+
+    record = Record(
+        tag='SAY',
+        payload=(
+            'she | '
+            'Sir and husband," she said, with great nervousness '
+            'at first, "you have summoned me hither to answer.'
+        ),
+        spans=[1],
+    )
+
+    assert _say_crosses_direct_quote_surface(
+        record,
+        source_by_local_no,
+    )
+
+    salvaged = _salvage_say_mixed_quote_surface(
+        record,
+        source_by_local_no,
+    )
+
+    assert salvaged is not None
+
+    assert [
+        candidate.payload
+        for candidate in salvaged
+    ] == [
+        'she | Sir and husband,',
+        'she | you have summoned me hither to answer.',
+    ]
+
+    assert all(
+        candidate.spans == [1]
+        for candidate in salvaged
+    )
+
+    assert all(
+        not _say_crosses_direct_quote_surface(
+            candidate,
+            source_by_local_no,
+        )
+        for candidate in salvaged
+    )
+
+
+def test_say_j1_leaves_clean_open_quote_candidate_untouched():
+    from app.reader import (
+        Record,
+        _salvage_say_mixed_quote_surface,
+    )
+
+    source_by_local_no = {
+        1: (
+            '"The speech continues all the way '
+            'to paragraph end'
+        ),
+    }
+
+    record = Record(
+        tag='SAY',
+        payload=(
+            'Mira | '
+            'The speech continues all the way '
+            'to paragraph end'
+        ),
+        spans=[1],
+    )
+
+    assert (
+        _salvage_say_mixed_quote_surface(
+            record,
+            source_by_local_no,
+        )
+        is None
+    )
+
+
+def test_say_j1_abstains_fragment_when_ordinary_locator_would_move_it():
+    from app.reader import (
+        Record,
+        _salvage_say_mixed_quote_surface,
+    )
+
+    # The second "No." is a distinct quoted source surface, but
+    # _say_content_bounds() would resolve it to the first literal
+    # occurrence. j1 must therefore abstain from emitting that
+    # second fragment rather than manufacture wrong geometry.
+    source_by_local_no = {
+        1: (
+            '"No." Mira paused. "No."'
+        ),
+    }
+
+    record = Record(
+        tag='SAY',
+        payload=(
+            'Mira | '
+            'No." Mira paused. "No.'
+        ),
+        spans=[1],
+    )
+
+    salvaged = _salvage_say_mixed_quote_surface(
+        record,
+        source_by_local_no,
+    )
+
+    assert salvaged is not None
+
+    assert [
+        candidate.payload
+        for candidate in salvaged
+    ] == [
+        'Mira | No.',
+    ]
+

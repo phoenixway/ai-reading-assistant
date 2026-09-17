@@ -1,0 +1,772 @@
+cd /home/romankozak/studio/public/it/ai-reading-assistant/experimental/reader-mvp
+
+PYTHONPATH=. .venv/bin/python \
+  scripts/diagnostics/real_book_say_microbatch_trace.py \
+  | tee /tmp/say-seg8-11-current.txt
+
+======================================================================================================================
+SEG 8 chapter=8 tokens=2463
+======================================================================================================================
+
+SOURCE ROW COUNT: 30
+TARGET COUNT: 20
+BATCH COUNT: 9
+BATCH TARGETS: [[10, 11, 12], [12, 13, 14], [14, 15, 16], [16, 17, 18], [18, 19, 20], [20, 21, 22], [24, 25, 26], [26, 27, 28], [28, 29, 30]]
+
+--- ALL TARGETS ---
+
+[P10] quotes=2
+Soon after its delivery a slight tap was heard at the door of Sir John's study, this room being always his favourite haunt, where he sat beside a bright and glowing fire, engaged in sullen thought; and with an imperious "Come in!" he still remained in the same thinking posture; nor was he aware, for fully five minutes or so, that his intruder was no other than she whom he so recently ordered into his presence!
+
+[P11] quotes=2
+Gazing up in a manner which startled the cold-hearted woman not a little, he requested her "to have a seat right opposite his," to which she instantly complied. At this moment the snow was wafting its flaky handfuls thickly against the barred enclosures of Dunfern Mansion, and chilly as nature appeared outside, it was similarly so indoors for the fond and far-famed husband of Lord Dilworth's charge.
+
+[P12] quotes=0
+Matters had appeared so unpleasant and altogether bewildering of late that Sir John formed a resolution to bring them to a crisis. Looking fully into the face that seemed so lovely just now, with the dainty spots of blazing ire enlivening the pale cheeks of creeping sin, Sir John began--
+
+[P13] quotes=1
+"Irene, if I may use such familiarity, I have summoned you hither, it may be to undergo a stricter examination than your present condition probably permits; but knowing, as you should, my life must be miserable under this growing cloud of unfathomed dislike, I became resolved to end, if within my power, such contentious and unladylike conduct as that practised by you towards me of late. It is now quite six months--yea, weary months--since I shielded you from open penury and insult, which were bound to follow you, as well as your much-loved protectors, who sheltered you from the pangs of penniless orphanage; and during these six months, which naturally should have been the pet period of nuptial harmony, it has proved the hideous period of howling dislike!
+
+[P14] quotes=1
+"I, as you see, am tinged with slightly snowy tufts, the result of stifled sorrow and care concerning you alone; and on the memorable day of our alliance, as you are well aware, the black and glossy locks of glistening glory crowned my brow. There dwelt then, just six months this day, no trace of sorrow or smothered woe--no variety of colour where it is and shall be so long as I exist--no furrows of grief could then be traced upon my visage. But, alas! now I feel so changed! And why?
+
+[P15] quotes=1
+"Because I have dastardly and doggedly been made a tool of treason in the hands of the traitoress and unworthy! I was enticed to believe that an angel was always hovering around my footsteps, when moodily engaged in resolving to acquaint you of my great love, and undying desire to place you upon the highest pinnacle possible of praise and purity within my power to bestow!
+
+[P16] quotes=1
+"I was led to believe that your unbounded joy and happiness were never at such a par as when sharing them with me. Was I falsely informed of your ways and worth? Was I duped to ascend the ladder of liberty, the hill of harmony, the tree of triumph, and the rock of regard, and when wildly manifesting my act of ascension, was I to be informed of treading still in the valley of defeat?
+
+[P17] quotes=1
+"Am I, who for nearly forty years was idolised by a mother of untainted and great Christian bearing, to be treated now like a slave? Why and for what am I thus dealt with?
+
+[P18] quotes=1
+"Am I to foster the opinion that you treat me thus on account of not sharing so fully in your confidence as it may be, another?
+
+[P19] quotes=1
+"Or is it, can it be, imaginative that you have reluctantly shared, only shared, with me that which I have bought and paid for fully?
+
+[P20] quotes=1
+"Can it be that your attention has ever been, or is still, attracted by another, who, by some artifice or other, had the audacity to steal your desire for me and hide it beneath his pillaged pillow of poverty, there to conceal it until demanded with my ransom?
+
+[P21] quotes=1
+"Speak! Irene! Wife! Woman! Do not sit in silence and allow the blood that now boils in my veins to ooze through cavities of unrestrained passion and trickle down to drench me with its crimson hue!
+
+[P22] quotes=2
+"Speak, I implore you, for my sake, and act no more the deceitful Duchess of Nante, who, when taken to task by the great Napoleon for refusing to dance with him at a State ball, replied, 'You honoured me too highly'--acting the hypocrite to his very face. Are you doing likewise?" Here Sir John, whose flushed face, swollen temples, and fiery looks were the image of indignation, restlessly awaited her reply.
+
+[P24] quotes=0
+Let it be thoroughly understood that Lady Dunfern was forced into a union she never honestly countenanced. She was almost compelled, through the glittering polish Lady Dilworth put on matters, to silently resign the hand of one whose adoration was amply returned, and enter into a contract which she could never properly complete. All she could now do was to plunge herself into the lake of evasion and answer him as best she could.
+
+[P25] quotes=3
+"Sir and husband," she said, with great nervousness at first, "you have summoned me hither to lash your rebuke unmercifully upon me, provoked, it may be, by underhand intercourse. You accordingly, in the course of your remarks, fail not to tamper with a character which as yet defies your scathing criticism. Only this week have I been made the recipient of news concerning my deceased parents, of whom I never before obtained the slightest clue, and armed with equality, I am in a position fit to treat some of your stingy remarks with the scorn they merit.
+
+[P26] quotes=1
+"You may not already be aware of the fact that I, whom you insinuate you wrested from beggary, am the only child of the late Colonel Iddesleigh, who fell a victim to a gunshot wound inflicted by the hand of his wife, who had fallen into the pit of intemperance. Yes, Earl Peden's daughter was his wife and my mother, and only that this vice so actuated her movements, I might still have lent to Society the object it dare not now claim, and thereby would have shunned the iron rule of being bound down to exist for months at a time within such a small space of the world's great bed.
+
+[P27] quotes=1
+"If my manner have changed in any way since our union, of it I am not aware, and fail to be persuaded of any existing difference, only what might be attributed to Lady Dilworth's sudden and unexpected removal from our midst, which occasioned me grief indeed.
+
+[P28] quotes=1
+"It behoves elderly men like you to rule their wives with jealous supervision, especially if the latter tread on the fields of youth. Such is often fictitious and unfounded altogether, and should be treated with marked silence.
+
+[P29] quotes=1
+"I may here say I was mistress, in a measure, of my movements whilst under the meek rule of Lady Dilworth; nor was I ever thwarted in any way from acting throughout her entire household as I best thought fit, and since I have taken upon me to hold the reins of similarity within these walls, I find they are much more difficult to manage. I, more than once, have given orders which were completely prohibited from being executed. By whom, might I ask, and why? Taking everything into consideration, I am quite justified in acquainting you that, instead of being the oppressor, I feel I am the oppressed.
+
+[P30] quotes=1
+"Relative to my affections, pray have those courted by me in the past aught to do with the present existing state of affairs? I am fully persuaded to answer, 'Nothing whatever.'
+
+######################################################################################################################
+BATCH 1/9 targets=[10, 11, 12]
+######################################################################################################################
+
+--- BATCH 1 USER MESSAGE ---
+Extract ONLY speech actually spoken aloud from these paragraphs.
+
+[P10] Soon after its delivery a slight tap was heard at the door of Sir John's study, this room being always his favourite haunt, where he sat beside a bright and glowing fire, engaged in sullen thought; and with an imperious "Come in!" he still remained in the same thinking posture; nor was he aware, for fully five minutes or so, that his intruder was no other than she whom he so recently ordered into his presence!
+
+[P11] Gazing up in a manner which startled the cold-hearted woman not a little, he requested her "to have a seat right opposite his," to which she instantly complied. At this moment the snow was wafting its flaky handfuls thickly against the barred enclosures of Dunfern Mansion, and chilly as nature appeared outside, it was similarly so indoors for the fond and far-famed husband of Lord Dilworth's charge.
+
+[P12] Matters had appeared so unpleasant and altogether bewildering of late that Sir John formed a resolution to bring them to a crisis. Looking fully into the face that seemed so lovely just now, with the dainty spots of blazing ire enlivening the pale cheeks of creeping sin, Sir John began--
+
+--- BATCH 1 RAW ---
+SAY: Sir John | "Come in!" @P10
+SAY: he | "to have a seat right opposite his" @P11
+SAY: Sir John | looking fully into the face that seemed so lovely just now @P12
+elapsed: 5.12s
+
+BATCH 1 PROVENANCE COMPLETED: 0
+
+--- BATCH 1 PARSED ---
+SAY: Sir John | "Come in!" @ [10]
+SAY: he | "to have a seat right opposite his" @ [11]
+SAY: Sir John | looking fully into the face that seemed so lovely just now @ [12]
+
+BATCH 1 PARSE STATS: {'parsed': 3, 'ignored': 0, 'quarantined': 0, 'no_span': 0, 'span_needed': 3, 'span_valid': 3, 'span_validity': 1.0, 'junk_ratio': 0.0, 'content_count': 3, 'repaired_prefix': 0, 'disallowed': 0, 'shape_invalid': 0, 'end_tail_miss': 0}
+
+######################################################################################################################
+BATCH 2/9 targets=[12, 13, 14]
+######################################################################################################################
+
+--- BATCH 2 USER MESSAGE ---
+Extract ONLY speech actually spoken aloud from these paragraphs.
+
+[P12] Matters had appeared so unpleasant and altogether bewildering of late that Sir John formed a resolution to bring them to a crisis. Looking fully into the face that seemed so lovely just now, with the dainty spots of blazing ire enlivening the pale cheeks of creeping sin, Sir John began--
+
+[P13] "Irene, if I may use such familiarity, I have summoned you hither, it may be to undergo a stricter examination than your present condition probably permits; but knowing, as you should, my life must be miserable under this growing cloud of unfathomed dislike, I became resolved to end, if within my power, such contentious and unladylike conduct as that practised by you towards me of late. It is now quite six months--yea, weary months--since I shielded you from open penury and insult, which were bound to follow you, as well as your much-loved protectors, who sheltered you from the pangs of penniless orphanage; and during these six months, which naturally should have been the pet period of nuptial harmony, it has proved the hideous period of howling dislike!
+
+[P14] "I, as you see, am tinged with slightly snowy tufts, the result of stifled sorrow and care concerning you alone; and on the memorable day of our alliance, as you are well aware, the black and glossy locks of glistening glory crowned my brow. There dwelt then, just six months this day, no trace of sorrow or smothered woe--no variety of colour where it is and shall be so long as I exist--no furrows of grief could then be traced upon my visage. But, alas! now I feel so changed! And why?
+
+--- BATCH 2 RAW ---
+SAY: Sir John | “Irene, if I may use such familiarity, I have summoned you hither, it may be to undergo a stricter examination than your present condition probably permits; but knowing, as you should, my life must be miserable under this growing cloud of unfathomed dislike, I became resolved to end, if within my power, such contentious and unladylike conduct as that practised by you towards me of late. It is now quite six months--yea, weary months--since I shielded you from open penury and insult, which were bound to follow you, as well as your much-loved protectors, who sheltered you from the pangs of penniless orphanage; and during these six months, which naturally should have been the pet period of nuptial harmony, it has proved the hideous period of howling dislike!” @P13
+elapsed: 3.25s
+
+BATCH 2 PROVENANCE COMPLETED: 0
+
+--- BATCH 2 PARSED ---
+SAY: Sir John | “Irene, if I may use such familiarity, I have summoned you hither, it may be to undergo a stricter examination than your present condition probably permits; but knowing, as you should, my life must be miserable under this growing cloud of unfathomed dislike, I became resolved to end, if within my power, such contentious and unladylike conduct as that practised by you towards me of late. It is now quite six months--yea, weary months--since I shielded you from open penury and insult, which were bound to follow you, as well as your much-loved protectors, who sheltered you from the pangs of penniless orphanage; and during these six months, which naturally should have been the pet period of nuptial harmony, it has proved the hideous period of howling dislike!” @ [13]
+
+BATCH 2 PARSE STATS: {'parsed': 1, 'ignored': 0, 'quarantined': 0, 'no_span': 0, 'span_needed': 1, 'span_valid': 1, 'span_validity': 1.0, 'junk_ratio': 0.0, 'content_count': 1, 'repaired_prefix': 0, 'disallowed': 0, 'shape_invalid': 0, 'end_tail_miss': 0}
+
+######################################################################################################################
+BATCH 3/9 targets=[14, 15, 16]
+######################################################################################################################
+
+--- BATCH 3 USER MESSAGE ---
+Extract ONLY speech actually spoken aloud from these paragraphs.
+
+[P14] "I, as you see, am tinged with slightly snowy tufts, the result of stifled sorrow and care concerning you alone; and on the memorable day of our alliance, as you are well aware, the black and glossy locks of glistening glory crowned my brow. There dwelt then, just six months this day, no trace of sorrow or smothered woe--no variety of colour where it is and shall be so long as I exist--no furrows of grief could then be traced upon my visage. But, alas! now I feel so changed! And why?
+
+[P15] "Because I have dastardly and doggedly been made a tool of treason in the hands of the traitoress and unworthy! I was enticed to believe that an angel was always hovering around my footsteps, when moodily engaged in resolving to acquaint you of my great love, and undying desire to place you upon the highest pinnacle possible of praise and purity within my power to bestow!
+
+[P16] "I was led to believe that your unbounded joy and happiness were never at such a par as when sharing them with me. Was I falsely informed of your ways and worth? Was I duped to ascend the ladder of liberty, the hill of harmony, the tree of triumph, and the rock of regard, and when wildly manifesting my act of ascension, was I to be informed of treading still in the valley of defeat?
+
+--- BATCH 3 RAW ---
+SAY: Silas | “I, as you see, am tinged with slightly snowy tufts, the result of stifled sorrow and care concerning you alone; and on the memorable day of our alliance, as you are well aware, the black and glossy locks of glistening glory crowned my brow. There dwelt then, just six months this day, no trace of sorrow or smothered woe--no variety of colour where it is and shall be so long as I exist--no furrows of grief could then be traced upon my visage. But, alas! now I feel so changed! And why?” @P14
+SAY: Silas | “Because I have dastardly and doggedly been made a tool of treason in the hands of the traitoress and unworthy! I was enticed to believe that an angel was always hovering around my footsteps, when moodily engaged in resolving to acquaint you of my great love, and undying desire to place you upon the highest pinnacle possible of praise and purity within my power to bestow!” @P15
+SAY: Silas | “Was I falsely informed of your ways and worth? Was I duped to ascend the ladder of liberty, the hill of harmony, the tree of triumph, and the rock of regard, and when wildly manifesting my act of ascension, was I to be informed of treading still in the valley of defeat?” @P16
+elapsed: 6.46s
+
+BATCH 3 PROVENANCE COMPLETED: 0
+
+--- BATCH 3 PARSED ---
+SAY: Silas | “I, as you see, am tinged with slightly snowy tufts, the result of stifled sorrow and care concerning you alone; and on the memorable day of our alliance, as you are well aware, the black and glossy locks of glistening glory crowned my brow. There dwelt then, just six months this day, no trace of sorrow or smothered woe--no variety of colour where it is and shall be so long as I exist--no furrows of grief could then be traced upon my visage. But, alas! now I feel so changed! And why?” @ [14]
+SAY: Silas | “Because I have dastardly and doggedly been made a tool of treason in the hands of the traitoress and unworthy! I was enticed to believe that an angel was always hovering around my footsteps, when moodily engaged in resolving to acquaint you of my great love, and undying desire to place you upon the highest pinnacle possible of praise and purity within my power to bestow!” @ [15]
+SAY: Silas | “Was I falsely informed of your ways and worth? Was I duped to ascend the ladder of liberty, the hill of harmony, the tree of triumph, and the rock of regard, and when wildly manifesting my act of ascension, was I to be informed of treading still in the valley of defeat?” @ [16]
+
+BATCH 3 PARSE STATS: {'parsed': 3, 'ignored': 0, 'quarantined': 0, 'no_span': 0, 'span_needed': 3, 'span_valid': 3, 'span_validity': 1.0, 'junk_ratio': 0.0, 'content_count': 3, 'repaired_prefix': 0, 'disallowed': 0, 'shape_invalid': 0, 'end_tail_miss': 0}
+
+######################################################################################################################
+BATCH 4/9 targets=[16, 17, 18]
+######################################################################################################################
+
+--- BATCH 4 USER MESSAGE ---
+Extract ONLY speech actually spoken aloud from these paragraphs.
+
+[P16] "I was led to believe that your unbounded joy and happiness were never at such a par as when sharing them with me. Was I falsely informed of your ways and worth? Was I duped to ascend the ladder of liberty, the hill of harmony, the tree of triumph, and the rock of regard, and when wildly manifesting my act of ascension, was I to be informed of treading still in the valley of defeat?
+
+[P17] "Am I, who for nearly forty years was idolised by a mother of untainted and great Christian bearing, to be treated now like a slave? Why and for what am I thus dealt with?
+
+[P18] "Am I to foster the opinion that you treat me thus on account of not sharing so fully in your confidence as it may be, another?
+
+--- BATCH 4 RAW ---
+SAY: Silas | "I was led to believe that your unbounded joy and happiness were never at such a par as when sharing them with me. Was I falsely informed of your ways and worth? Was I duped to ascend the ladder of liberty, the hill of harmony, the tree of triumph, and the rock of regard, and when wildly manifesting my act of ascension, was I to be informed of treading still in the valley of defeat?" @P16
+SAY: Silas | "Am I, who for nearly forty years was idolised by a mother of untainted and great Christian bearing, to be treated now like a slave? Why and for what am I thus dealt with?" @P17
+SAY: Silas | "Am I to foster the opinion that you treat me thus on account of not sharing so fully in your confidence as it may be, another?" @P18
+elapsed: 3.13s
+
+BATCH 4 PROVENANCE COMPLETED: 0
+
+--- BATCH 4 PARSED ---
+SAY: Silas | "I was led to believe that your unbounded joy and happiness were never at such a par as when sharing them with me. Was I falsely informed of your ways and worth? Was I duped to ascend the ladder of liberty, the hill of harmony, the tree of triumph, and the rock of regard, and when wildly manifesting my act of ascension, was I to be informed of treading still in the valley of defeat?" @ [16]
+SAY: Silas | "Am I, who for nearly forty years was idolised by a mother of untainted and great Christian bearing, to be treated now like a slave? Why and for what am I thus dealt with?" @ [17]
+SAY: Silas | "Am I to foster the opinion that you treat me thus on account of not sharing so fully in your confidence as it may be, another?" @ [18]
+
+BATCH 4 PARSE STATS: {'parsed': 3, 'ignored': 0, 'quarantined': 0, 'no_span': 0, 'span_needed': 3, 'span_valid': 3, 'span_validity': 1.0, 'junk_ratio': 0.0, 'content_count': 3, 'repaired_prefix': 0, 'disallowed': 0, 'shape_invalid': 0, 'end_tail_miss': 0}
+
+######################################################################################################################
+BATCH 5/9 targets=[18, 19, 20]
+######################################################################################################################
+
+--- BATCH 5 USER MESSAGE ---
+Extract ONLY speech actually spoken aloud from these paragraphs.
+
+[P18] "Am I to foster the opinion that you treat me thus on account of not sharing so fully in your confidence as it may be, another?
+
+[P19] "Or is it, can it be, imaginative that you have reluctantly shared, only shared, with me that which I have bought and paid for fully?
+
+[P20] "Can it be that your attention has ever been, or is still, attracted by another, who, by some artifice or other, had the audacity to steal your desire for me and hide it beneath his pillaged pillow of poverty, there to conceal it until demanded with my ransom?
+
+--- BATCH 5 RAW ---
+SAY: Silas | "Am I to foster the opinion that you treat me thus on account of not sharing so fully in your confidence as it may be, another?" @P18
+SAY: Silas | "Or is it, can it be, imaginative that you have reluctantly shared, only shared, with me that which I have bought and paid for fully?" @P19
+SAY: Silas | "Can it be that your attention has ever been, or is still, attracted by another, who, by some artifice or other, had the audacity to steal your desire for me and hide it beneath his pillaged pillow of poverty, there to conceal it until demanded with my ransom?" @P20
+elapsed: 2.34s
+
+BATCH 5 PROVENANCE COMPLETED: 0
+
+--- BATCH 5 PARSED ---
+SAY: Silas | "Am I to foster the opinion that you treat me thus on account of not sharing so fully in your confidence as it may be, another?" @ [18]
+SAY: Silas | "Or is it, can it be, imaginative that you have reluctantly shared, only shared, with me that which I have bought and paid for fully?" @ [19]
+SAY: Silas | "Can it be that your attention has ever been, or is still, attracted by another, who, by some artifice or other, had the audacity to steal your desire for me and hide it beneath his pillaged pillow of poverty, there to conceal it until demanded with my ransom?" @ [20]
+
+BATCH 5 PARSE STATS: {'parsed': 3, 'ignored': 0, 'quarantined': 0, 'no_span': 0, 'span_needed': 3, 'span_valid': 3, 'span_validity': 1.0, 'junk_ratio': 0.0, 'content_count': 3, 'repaired_prefix': 0, 'disallowed': 0, 'shape_invalid': 0, 'end_tail_miss': 0}
+
+######################################################################################################################
+BATCH 6/9 targets=[20, 21, 22]
+######################################################################################################################
+
+--- BATCH 6 USER MESSAGE ---
+Extract ONLY speech actually spoken aloud from these paragraphs.
+
+[P20] "Can it be that your attention has ever been, or is still, attracted by another, who, by some artifice or other, had the audacity to steal your desire for me and hide it beneath his pillaged pillow of poverty, there to conceal it until demanded with my ransom?
+
+[P21] "Speak! Irene! Wife! Woman! Do not sit in silence and allow the blood that now boils in my veins to ooze through cavities of unrestrained passion and trickle down to drench me with its crimson hue!
+
+[P22] "Speak, I implore you, for my sake, and act no more the deceitful Duchess of Nante, who, when taken to task by the great Napoleon for refusing to dance with him at a State ball, replied, 'You honoured me too highly'--acting the hypocrite to his very face. Are you doing likewise?" Here Sir John, whose flushed face, swollen temples, and fiery looks were the image of indignation, restlessly awaited her reply.
+
+--- BATCH 6 RAW ---
+SAY: Irene | "Speak! Irene! Wife! Woman! Do not sit in silence and allow the blood that now boils in my veins to ooze through cavities of unrestrained passion and trickle down to drench me with its crimson hue!" @P21
+SAY: Duchess of Nante | "You honoured me too highly" @P22
+SAY: Sir John | "Speak, I implore you, for my sake, and act no more the deceitful Duchess of Nante, who, when taken to task by the great Napoleon for refusing to dance with him at a State ball, replied, 'You honoured me too highly'" @P22
+elapsed: 2.78s
+
+BATCH 6 PROVENANCE COMPLETED: 0
+
+--- BATCH 6 PARSED ---
+SAY: Irene | "Speak! Irene! Wife! Woman! Do not sit in silence and allow the blood that now boils in my veins to ooze through cavities of unrestrained passion and trickle down to drench me with its crimson hue!" @ [21]
+SAY: Duchess of Nante | "You honoured me too highly" @ [22]
+SAY: Sir John | "Speak, I implore you, for my sake, and act no more the deceitful Duchess of Nante, who, when taken to task by the great Napoleon for refusing to dance with him at a State ball, replied, 'You honoured me too highly'" @ [22]
+
+BATCH 6 PARSE STATS: {'parsed': 3, 'ignored': 0, 'quarantined': 0, 'no_span': 0, 'span_needed': 3, 'span_valid': 3, 'span_validity': 1.0, 'junk_ratio': 0.0, 'content_count': 3, 'repaired_prefix': 0, 'disallowed': 0, 'shape_invalid': 0, 'end_tail_miss': 0}
+
+######################################################################################################################
+BATCH 7/9 targets=[24, 25, 26]
+######################################################################################################################
+
+--- BATCH 7 USER MESSAGE ---
+Extract ONLY speech actually spoken aloud from these paragraphs.
+
+[P24] Let it be thoroughly understood that Lady Dunfern was forced into a union she never honestly countenanced. She was almost compelled, through the glittering polish Lady Dilworth put on matters, to silently resign the hand of one whose adoration was amply returned, and enter into a contract which she could never properly complete. All she could now do was to plunge herself into the lake of evasion and answer him as best she could.
+
+[P25] "Sir and husband," she said, with great nervousness at first, "you have summoned me hither to lash your rebuke unmercifully upon me, provoked, it may be, by underhand intercourse. You accordingly, in the course of your remarks, fail not to tamper with a character which as yet defies your scathing criticism. Only this week have I been made the recipient of news concerning my deceased parents, of whom I never before obtained the slightest clue, and armed with equality, I am in a position fit to treat some of your stingy remarks with the scorn they merit.
+
+[P26] "You may not already be aware of the fact that I, whom you insinuate you wrested from beggary, am the only child of the late Colonel Iddesleigh, who fell a victim to a gunshot wound inflicted by the hand of his wife, who had fallen into the pit of intemperance. Yes, Earl Peden's daughter was his wife and my mother, and only that this vice so actuated her movements, I might still have lent to Society the object it dare not now claim, and thereby would have shunned the iron rule of being bound down to exist for months at a time within such a small space of the world's great bed.
+
+--- BATCH 7 RAW ---
+SAY: Lady Dunfern | Let it be thoroughly understood that Lady Dunfern was forced into a union she never honestly countenanced. She was almost compelled, through the glittering polish Lady Dilworth put on matters, to silently resign the hand of one whose adoration was amply returned, and enter into a contract which she could never properly complete. All she could now do was to plunge herself into the lake of evasion and answer him as best she could. @P24
+SAY: she | "Sir and husband," she said, with great nervousness at first, "you have summoned me hither to lash your rebuke unmercifully upon me, provoked, it may be, by underhand intercourse. You accordingly, in the course of your remarks, fail not to tamper with a character which as yet defies your scathing criticism. Only this week have I been made the recipient of news concerning my deceased parents, of whom I never before obtained the slightest clue, and armed with equality, I am in a position fit to treat some of your stingy remarks with the scorn they merit." @P25
+SAY: she | "You may not already be aware of the fact that I, whom you insinuate you wrested from beggary, am the only child of the late Colonel Iddesleigh, who fell a victim to a gunshot wound inflicted by the hand of his wife, who had fallen into the pit of intemperance. Yes, Earl Peden's daughter was his wife and my mother, and only that this vice so actuated her movements, I might still have lent to Society the object it dare not now claim, and thereby would have shunned the iron rule of being bound down to exist for months at a time within such a small space of the world's great bed." @P26
+elapsed: 6.23s
+
+BATCH 7 PROVENANCE COMPLETED: 0
+
+--- BATCH 7 PARSED ---
+SAY: Lady Dunfern | Let it be thoroughly understood that Lady Dunfern was forced into a union she never honestly countenanced. She was almost compelled, through the glittering polish Lady Dilworth put on matters, to silently resign the hand of one whose adoration was amply returned, and enter into a contract which she could never properly complete. All she could now do was to plunge herself into the lake of evasion and answer him as best she could. @ [24]
+SAY: she | "Sir and husband," she said, with great nervousness at first, "you have summoned me hither to lash your rebuke unmercifully upon me, provoked, it may be, by underhand intercourse. You accordingly, in the course of your remarks, fail not to tamper with a character which as yet defies your scathing criticism. Only this week have I been made the recipient of news concerning my deceased parents, of whom I never before obtained the slightest clue, and armed with equality, I am in a position fit to treat some of your stingy remarks with the scorn they merit." @ [25]
+SAY: she | "You may not already be aware of the fact that I, whom you insinuate you wrested from beggary, am the only child of the late Colonel Iddesleigh, who fell a victim to a gunshot wound inflicted by the hand of his wife, who had fallen into the pit of intemperance. Yes, Earl Peden's daughter was his wife and my mother, and only that this vice so actuated her movements, I might still have lent to Society the object it dare not now claim, and thereby would have shunned the iron rule of being bound down to exist for months at a time within such a small space of the world's great bed." @ [26]
+
+BATCH 7 PARSE STATS: {'parsed': 3, 'ignored': 0, 'quarantined': 0, 'no_span': 0, 'span_needed': 3, 'span_valid': 3, 'span_validity': 1.0, 'junk_ratio': 0.0, 'content_count': 3, 'repaired_prefix': 0, 'disallowed': 0, 'shape_invalid': 0, 'end_tail_miss': 0}
+
+######################################################################################################################
+BATCH 8/9 targets=[26, 27, 28]
+######################################################################################################################
+
+--- BATCH 8 USER MESSAGE ---
+Extract ONLY speech actually spoken aloud from these paragraphs.
+
+[P26] "You may not already be aware of the fact that I, whom you insinuate you wrested from beggary, am the only child of the late Colonel Iddesleigh, who fell a victim to a gunshot wound inflicted by the hand of his wife, who had fallen into the pit of intemperance. Yes, Earl Peden's daughter was his wife and my mother, and only that this vice so actuated her movements, I might still have lent to Society the object it dare not now claim, and thereby would have shunned the iron rule of being bound down to exist for months at a time within such a small space of the world's great bed.
+
+[P27] "If my manner have changed in any way since our union, of it I am not aware, and fail to be persuaded of any existing difference, only what might be attributed to Lady Dilworth's sudden and unexpected removal from our midst, which occasioned me grief indeed.
+
+[P28] "It behoves elderly men like you to rule their wives with jealous supervision, especially if the latter tread on the fields of youth. Such is often fictitious and unfounded altogether, and should be treated with marked silence.
+
+--- BATCH 8 RAW ---
+SAY: Earl Peden | “You may not already be aware of the fact that I, whom you insinuate you wrested from beggary, am the only child of the late Colonel Iddesleigh, who fell a victim to a gunshot wound inflicted by the hand of his wife, who had fallen into the pit of intemperance.” @P26
+SAY: Earl Peden | “Yes, Earl Peden's daughter was his wife and my mother, and only that this vice so actuated her movements, I might still have lent to Society the object it dare not now claim, and thereby would have shunned the iron rule of being bound down to exist for months at a time within such a small space of the world's great bed.” @P26
+SAY: Earl Peden | “If my manner have changed in any way since our union, of it I am not aware, and fail to be persuaded of any existing difference, only what might be attributed to Lady Dilworth's sudden and unexpected removal from our midst, which occasioned me grief indeed.” @P27
+elapsed: 3.62s
+
+BATCH 8 PROVENANCE COMPLETED: 0
+
+--- BATCH 8 PARSED ---
+SAY: Earl Peden | “You may not already be aware of the fact that I, whom you insinuate you wrested from beggary, am the only child of the late Colonel Iddesleigh, who fell a victim to a gunshot wound inflicted by the hand of his wife, who had fallen into the pit of intemperance.” @ [26]
+SAY: Earl Peden | “Yes, Earl Peden's daughter was his wife and my mother, and only that this vice so actuated her movements, I might still have lent to Society the object it dare not now claim, and thereby would have shunned the iron rule of being bound down to exist for months at a time within such a small space of the world's great bed.” @ [26]
+SAY: Earl Peden | “If my manner have changed in any way since our union, of it I am not aware, and fail to be persuaded of any existing difference, only what might be attributed to Lady Dilworth's sudden and unexpected removal from our midst, which occasioned me grief indeed.” @ [27]
+
+BATCH 8 PARSE STATS: {'parsed': 3, 'ignored': 0, 'quarantined': 0, 'no_span': 0, 'span_needed': 3, 'span_valid': 3, 'span_validity': 1.0, 'junk_ratio': 0.0, 'content_count': 3, 'repaired_prefix': 0, 'disallowed': 0, 'shape_invalid': 0, 'end_tail_miss': 0}
+
+######################################################################################################################
+BATCH 9/9 targets=[28, 29, 30]
+######################################################################################################################
+
+--- BATCH 9 USER MESSAGE ---
+Extract ONLY speech actually spoken aloud from these paragraphs.
+
+[P28] "It behoves elderly men like you to rule their wives with jealous supervision, especially if the latter tread on the fields of youth. Such is often fictitious and unfounded altogether, and should be treated with marked silence.
+
+[P29] "I may here say I was mistress, in a measure, of my movements whilst under the meek rule of Lady Dilworth; nor was I ever thwarted in any way from acting throughout her entire household as I best thought fit, and since I have taken upon me to hold the reins of similarity within these walls, I find they are much more difficult to manage. I, more than once, have given orders which were completely prohibited from being executed. By whom, might I ask, and why? Taking everything into consideration, I am quite justified in acquainting you that, instead of being the oppressor, I feel I am the oppressed.
+
+[P30] "Relative to my affections, pray have those courted by me in the past aught to do with the present existing state of affairs? I am fully persuaded to answer, 'Nothing whatever.'
+
+--- BATCH 9 RAW ---
+SAY: Lady Dilworth | It behoves elderly men like you to rule their wives with jealous supervision, especially if the latter tread on the fields of youth. @P28
+SAY: I | I may here say I was mistress, in a measure, of my movements whilst under the meek rule of Lady Dilworth; nor was I ever thwarted in any way from acting throughout her entire household as I best thought fit, and since I have taken upon me to hold the reins of similarity within these walls, I find they are much more difficult to manage. I, more than once, have given orders which were completely prohibited from being executed. By whom, might I ask, and why? Taking everything into consideration, I am quite justified in acquainting you that, instead of being the oppressor, I feel I am the oppressed. @P29
+SAY: I | Relative to my affections, pray have those courted by me in the past aught to do with the present existing state of affairs? I am fully persuaded to answer, 'Nothing whatever.' @P30
+elapsed: 10.32s
+
+BATCH 9 PROVENANCE COMPLETED: 0
+
+--- BATCH 9 PARSED ---
+SAY: Lady Dilworth | It behoves elderly men like you to rule their wives with jealous supervision, especially if the latter tread on the fields of youth. @ [28]
+SAY: I | I may here say I was mistress, in a measure, of my movements whilst under the meek rule of Lady Dilworth; nor was I ever thwarted in any way from acting throughout her entire household as I best thought fit, and since I have taken upon me to hold the reins of similarity within these walls, I find they are much more difficult to manage. I, more than once, have given orders which were completely prohibited from being executed. By whom, might I ask, and why? Taking everything into consideration, I am quite justified in acquainting you that, instead of being the oppressor, I feel I am the oppressed. @ [29]
+SAY: I | Relative to my affections, pray have those courted by me in the past aught to do with the present existing state of affairs? I am fully persuaded to answer, 'Nothing whatever.' @ [30]
+
+BATCH 9 PARSE STATS: {'parsed': 3, 'ignored': 0, 'quarantined': 0, 'no_span': 0, 'span_needed': 3, 'span_valid': 3, 'span_validity': 1.0, 'junk_ratio': 0.0, 'content_count': 3, 'repaired_prefix': 0, 'disallowed': 0, 'shape_invalid': 0, 'end_tail_miss': 0}
+
+======================================================================================================================
+--- MERGED BEFORE SANITIZER ---
+======================================================================================================================
+SAY: Sir John | "Come in!" @ [10]
+SAY: he | "to have a seat right opposite his" @ [11]
+SAY: Sir John | looking fully into the face that seemed so lovely just now @ [12]
+SAY: Sir John | “Irene, if I may use such familiarity, I have summoned you hither, it may be to undergo a stricter examination than your present condition probably permits; but knowing, as you should, my life must be miserable under this growing cloud of unfathomed dislike, I became resolved to end, if within my power, such contentious and unladylike conduct as that practised by you towards me of late. It is now quite six months--yea, weary months--since I shielded you from open penury and insult, which were bound to follow you, as well as your much-loved protectors, who sheltered you from the pangs of penniless orphanage; and during these six months, which naturally should have been the pet period of nuptial harmony, it has proved the hideous period of howling dislike!” @ [13]
+SAY: Silas | “I, as you see, am tinged with slightly snowy tufts, the result of stifled sorrow and care concerning you alone; and on the memorable day of our alliance, as you are well aware, the black and glossy locks of glistening glory crowned my brow. There dwelt then, just six months this day, no trace of sorrow or smothered woe--no variety of colour where it is and shall be so long as I exist--no furrows of grief could then be traced upon my visage. But, alas! now I feel so changed! And why?” @ [14]
+SAY: Silas | “Because I have dastardly and doggedly been made a tool of treason in the hands of the traitoress and unworthy! I was enticed to believe that an angel was always hovering around my footsteps, when moodily engaged in resolving to acquaint you of my great love, and undying desire to place you upon the highest pinnacle possible of praise and purity within my power to bestow!” @ [15]
+SAY: Silas | “Was I falsely informed of your ways and worth? Was I duped to ascend the ladder of liberty, the hill of harmony, the tree of triumph, and the rock of regard, and when wildly manifesting my act of ascension, was I to be informed of treading still in the valley of defeat?” @ [16]
+SAY: Silas | "I was led to believe that your unbounded joy and happiness were never at such a par as when sharing them with me. Was I falsely informed of your ways and worth? Was I duped to ascend the ladder of liberty, the hill of harmony, the tree of triumph, and the rock of regard, and when wildly manifesting my act of ascension, was I to be informed of treading still in the valley of defeat?" @ [16]
+SAY: Silas | "Am I, who for nearly forty years was idolised by a mother of untainted and great Christian bearing, to be treated now like a slave? Why and for what am I thus dealt with?" @ [17]
+SAY: Silas | "Am I to foster the opinion that you treat me thus on account of not sharing so fully in your confidence as it may be, another?" @ [18]
+SAY: Silas | "Or is it, can it be, imaginative that you have reluctantly shared, only shared, with me that which I have bought and paid for fully?" @ [19]
+SAY: Silas | "Can it be that your attention has ever been, or is still, attracted by another, who, by some artifice or other, had the audacity to steal your desire for me and hide it beneath his pillaged pillow of poverty, there to conceal it until demanded with my ransom?" @ [20]
+SAY: Irene | "Speak! Irene! Wife! Woman! Do not sit in silence and allow the blood that now boils in my veins to ooze through cavities of unrestrained passion and trickle down to drench me with its crimson hue!" @ [21]
+SAY: Duchess of Nante | "You honoured me too highly" @ [22]
+SAY: Sir John | "Speak, I implore you, for my sake, and act no more the deceitful Duchess of Nante, who, when taken to task by the great Napoleon for refusing to dance with him at a State ball, replied, 'You honoured me too highly'" @ [22]
+SAY: Lady Dunfern | Let it be thoroughly understood that Lady Dunfern was forced into a union she never honestly countenanced. She was almost compelled, through the glittering polish Lady Dilworth put on matters, to silently resign the hand of one whose adoration was amply returned, and enter into a contract which she could never properly complete. All she could now do was to plunge herself into the lake of evasion and answer him as best she could. @ [24]
+SAY: she | "Sir and husband," she said, with great nervousness at first, "you have summoned me hither to lash your rebuke unmercifully upon me, provoked, it may be, by underhand intercourse. You accordingly, in the course of your remarks, fail not to tamper with a character which as yet defies your scathing criticism. Only this week have I been made the recipient of news concerning my deceased parents, of whom I never before obtained the slightest clue, and armed with equality, I am in a position fit to treat some of your stingy remarks with the scorn they merit." @ [25]
+SAY: she | "You may not already be aware of the fact that I, whom you insinuate you wrested from beggary, am the only child of the late Colonel Iddesleigh, who fell a victim to a gunshot wound inflicted by the hand of his wife, who had fallen into the pit of intemperance. Yes, Earl Peden's daughter was his wife and my mother, and only that this vice so actuated her movements, I might still have lent to Society the object it dare not now claim, and thereby would have shunned the iron rule of being bound down to exist for months at a time within such a small space of the world's great bed." @ [26]
+SAY: Earl Peden | “You may not already be aware of the fact that I, whom you insinuate you wrested from beggary, am the only child of the late Colonel Iddesleigh, who fell a victim to a gunshot wound inflicted by the hand of his wife, who had fallen into the pit of intemperance.” @ [26]
+SAY: Earl Peden | “Yes, Earl Peden's daughter was his wife and my mother, and only that this vice so actuated her movements, I might still have lent to Society the object it dare not now claim, and thereby would have shunned the iron rule of being bound down to exist for months at a time within such a small space of the world's great bed.” @ [26]
+SAY: Earl Peden | “If my manner have changed in any way since our union, of it I am not aware, and fail to be persuaded of any existing difference, only what might be attributed to Lady Dilworth's sudden and unexpected removal from our midst, which occasioned me grief indeed.” @ [27]
+SAY: Lady Dilworth | It behoves elderly men like you to rule their wives with jealous supervision, especially if the latter tread on the fields of youth. @ [28]
+SAY: I | I may here say I was mistress, in a measure, of my movements whilst under the meek rule of Lady Dilworth; nor was I ever thwarted in any way from acting throughout her entire household as I best thought fit, and since I have taken upon me to hold the reins of similarity within these walls, I find they are much more difficult to manage. I, more than once, have given orders which were completely prohibited from being executed. By whom, might I ask, and why? Taking everything into consideration, I am quite justified in acquainting you that, instead of being the oppressor, I feel I am the oppressed. @ [29]
+SAY: I | Relative to my affections, pray have those courted by me in the past aught to do with the present existing state of affairs? I am fully persuaded to answer, 'Nothing whatever.' @ [30]
+
+MERGED STATS: {'parsed': 24, 'ignored': 0, 'quarantined': 0, 'no_span': 0, 'span_needed': 25, 'span_valid': 25, 'span_validity': 1.0, 'junk_ratio': 0.0, 'content_count': 24, 'repaired_prefix': 0, 'disallowed': 0, 'shape_invalid': 0, 'end_tail_miss': 0}
+TOTAL PROVENANCE COMPLETED: 0
+
+======================================================================================================================
+--- AFTER CURRENT SAY SANITIZER ---
+======================================================================================================================
+SAY: Sir John | “Irene, if I may use such familiarity, I have summoned you hither, it may be to undergo a stricter examination than your present condition probably permits; but knowing, as you should, my life must be miserable under this growing cloud of unfathomed dislike, I became resolved to end, if within my power, such contentious and unladylike conduct as that practised by you towards me of late. It is now quite six months--yea, weary months--since I shielded you from open penury and insult, which were bound to follow you, as well as your much-loved protectors, who sheltered you from the pangs of penniless orphanage; and during these six months, which naturally should have been the pet period of nuptial harmony, it has proved the hideous period of howling dislike!” @ [13]
+SAY: Sir John | "Speak, I implore you, for my sake, and act no more the deceitful Duchess of Nante, who, when taken to task by the great Napoleon for refusing to dance with him at a State ball, replied, 'You honoured me too highly'" @ [22]
+
+FINAL SANITIZER STATS: {'parsed': 2, 'ignored': 0, 'quarantined': 0, 'no_span': 0, 'span_needed': 25, 'span_valid': 25, 'span_validity': 1.0, 'junk_ratio': 0.0, 'content_count': 2, 'repaired_prefix': 0, 'disallowed': 0, 'shape_invalid': 0, 'end_tail_miss': 0, 'say_provenance_relocated': 0, 'say_conflict_dropped': 0, 'say_conflict_resolved': 0, 'say_document_dropped': 0, 'say_unsupported_dropped': 9, 'say_speaker_surface_dropped': 13, 'say_duplicate_dropped': 0, 'say_direct_supported': 2, 'say_indirect_supported': 0, 'say_source_supported': 2, 'say_provenance_completed': 0}
+TOTAL SAY ELAPSED: 43.24s
+
+======================================================================================================================
+SEG 11 chapter=10 tokens=2492
+======================================================================================================================
+
+SOURCE ROW COUNT: 33
+TARGET COUNT: 20
+BATCH COUNT: 10
+BATCH TARGETS: [[3, 4, 5], [9], [12], [15, 16, 17], [17, 18, 19], [19, 20, 21], [21, 22, 23], [23, 24], [28, 29, 30], [30, 31, 32]]
+
+--- ALL TARGETS ---
+
+[P03] quotes=4
+"Great heaven!" murmured Sir John, as the tutor's note fell from his nervous grasp, "Am I blind to touch or truth? Am I at last to labour under the fact that my wife loves another! she who only some months since protested her innocence in such strains as to cause the most doubtful to stay alarm. Here is the ring, and there lies the note--the note of him who claims to be not only her tutor but suitor. Why did she accept the former or cause the latter to be written?"
+
+[P04] quotes=2
+"Then, the date! Just one month exactly before our marriage; and how I pined for it to elapse whilst another would eagerly have prolonged it. Oh, Irene!--false and low woman! Think you that any longer I can own you as wife or treat you with the respect a wife deserves!" Sir John, ever open to forgiveness, tried hard to master the dreadful spirit of jealousy which arrived at last at its highest point, if he could feel convinced that his wife's correspondence with her tutor ceased after her marriage, believing if still it continued that other proofs of their dastardly plots would be forthcoming. Thrusting his hand again into the aperture from which he took the two tributes of his wife's tutor, there appeared nothing to arouse further suspicion, save a Christmas card, written with the same bold hand. The lines were these:--
+
+[P05] quotes=2
+"Accept my warmest greeting, friendship, love,
+ Thou art my charming Irene, pet and dove;
+ Although another claims thee for a time,
+ I trust to call you some day ever mine.
+ Oh! pray for parting soon with fettered chains,
+ To live and move regardless of those reins
+ That bind your Christmas sprigs of worldly woe
+ To him, whom you have hated long ago."
+
+[P09] quotes=0
+Instantly ordering a maid to send for Doctor Doherty, the false invalid lay back on her pillow, appearing not much concerned. On the doctor's arrival he applied restoratives, but without the desired effect. Then he ordered his instant removal to his bed-chamber, where every care and watchfulness was extended him by Rachel Hyde.
+
+[P12] quotes=2
+Lady Dunfern could not help noticing the strange and frozen manner of her husband since the eve of his illness. At first she was inclined to fear his approach, but gradually she felt convinced he was slightly affected with a mild form of insanity; and making minute inquiries from the oldest inhabitants in the neighbourhood and adjoining village as to the accuracy of her fears, she was informed that "such never existed amongst his ancestors, so far as they knew or heard."
+
+[P15] quotes=2
+After serious thought, Sir John began to act; he was inclined to think delay would be dangerous, and on approaching his breakfast table one morning soon after his recovery, he hinted to his housekeeper that he "wished a private interview with her after his morning repast." This Rachel punctually obeyed.
+
+[P16] quotes=2
+Seeing her master's trembling hand twitch the tips of his beard, she feared something dreadful must surely be disturbing his peace of mind, and commanding her to "lock the door" lest they should be interrupted, he informed her of all that had happened.
+
+[P17] quotes=0
+Rachel, ever ready to sow doubt in the mind of her master regarding his wife, manifested her want of surprise by relating some incidents which occurred under her notice. Nothing, however monstrous, could astonish Sir John at this time regarding his wife's movements, and informing Rachel of his intention he ordered the key of one of the rooms that yet had been shut against the entrance of Lady Dunfern.
+
+[P18] quotes=3
+Hastening to fulfil her master's order, Rachel returned with the mighty key, and handed it to Sir John, who moved to the door, and thrusting the rusty key into its aperture, succeeded with great difficulty in effecting an entrance. Rachel followed, and both entered, locking the heavy-panelled oak door from within. "This," said Sir John, "is the room of correction, the room of death. It defies escape or secretion. It has been so long as I remember held in abhorrence by my late lamented parents, and, so far as I can understand, by many of my ancestors.
+
+[P19] quotes=3
+"First of all, the lady who shared its midst was a born imbecile, the eldest daughter of my great great grandfather--Sir Sydney Dunfern. She was nursed and tenderly cared for within these walls for a period of thirty-six years, and through the instantaneous insanity of her ward, was marked a victim for his murderous hand. Yes, it has been related that during midnight, when she was fast asleep, he drew from that drawer" here Sir John pointed to the wardrobe, "a weapon of warlike design, and severed her head almost from her body, causing instant death.
+
+[P20] quotes=1
+"It was not known until next day about noon that anything extraordinary had happened. It was first detected by Sir Sydney himself, who became alarmed at not having seen Wade--the ward's name was Hector Wade--as usual at ten o'clock, and tapping at the door, was surprised to hear some noise issue from within. Being of a hasty temper, he became indignant at the ward's indifference, and calling loudly, finally gained admittance.
+
+[P21] quotes=1
+"The murderer had her stretched on this floor, and every article capable of being removed piled upon her corpse. Horrified at such a sight, Sir Sydney became wild with grief, and at once handed the pitiful lunatic over to those in authority.
+
+[P22] quotes=1
+"The next inhabitant doomed to share in its dull delight was Kathleen, wife of my beloved grandfather, a beautiful woman, whose portrait you now see. She, I am sorry to relate, proved more an accomplice than the honoured wife of him who added so much to the welfare of those who now benefit by his great economy. The hand of death visited her here likewise with its separating touch.
+
+[P23] quotes=2
+"The last person inhabiting its cheerless enclosure was a distant relative of my mother, a gentleman named Rodney Rupert, who fell from the path of virtue and trod the field of vice, until confined within this prison of pathetic account, and who, in a moment of passion, ended his days with that pistol which hangs on yonder hook, and on that bed all these lay, and which shall again be made use of by a traitoress of no mean account either."
+
+[P24] quotes=2
+Sir John then proceeded to give orders to "have the room made as comfortable as its scanty furniture permitted," which consisted only of one small table, one chair, and an old-fashioned wardrobe, with several small drawers attached, one dressing-table and wash-stand, all of which were magnificently carved oak and richly panelled.
+
+[P28] quotes=0
+Rachel, after receiving orders in confidence from her master, set matters to right by lighting a fire, dusting the old and much-worn furniture, airing the bed-clothes, etc., being strictly charged to admit, on no pretence whatever, now or at any time, any member of the household or visitor to the mansion.
+
+[P29] quotes=2
+When everything was in perfect readiness for the reception of its guest, Sir John directed Rachel to "bring her Ladyship into his presence." What could have astonished Lady Dunfern more on being ushered into a room which never before was open for her inspection? Nothing save the information her husband eagerly awaited her to receive. On being informed of her vast deception, which was proved beyond doubt, and to which she felt wholly incompetent to reply, she was absolutely dumb-stricken.
+
+[P30] quotes=0
+It required no further questioning now concerning her husband's recent strangeness of manner and rigid coolness with which he was forced to treat her whom he scorned to call wife.
+
+[P31] quotes=3
+"You, madam," said he, "have by your conduct, both before and after marriage, forced me to keep you a prisoner within these walls so long as you live or I exist.
+
+[P32] quotes=2
+"You have not failed to act the infamous by kissing me with the lips of a Judas! You have at last plunged me into deepest disgrace, not alone me, but him whom you should have been liberated to succour and chastise. Mocking wretch! your foul deeds shall have plenty of scope here for improvement, and a prisoner you shall be during the remainder of your life."
+
+######################################################################################################################
+BATCH 1/10 targets=[3, 4, 5]
+######################################################################################################################
+
+--- BATCH 1 USER MESSAGE ---
+Extract ONLY speech actually spoken aloud from these paragraphs.
+
+[P03] "Great heaven!" murmured Sir John, as the tutor's note fell from his nervous grasp, "Am I blind to touch or truth? Am I at last to labour under the fact that my wife loves another! she who only some months since protested her innocence in such strains as to cause the most doubtful to stay alarm. Here is the ring, and there lies the note--the note of him who claims to be not only her tutor but suitor. Why did she accept the former or cause the latter to be written?"
+
+[P04] "Then, the date! Just one month exactly before our marriage; and how I pined for it to elapse whilst another would eagerly have prolonged it. Oh, Irene!--false and low woman! Think you that any longer I can own you as wife or treat you with the respect a wife deserves!" Sir John, ever open to forgiveness, tried hard to master the dreadful spirit of jealousy which arrived at last at its highest point, if he could feel convinced that his wife's correspondence with her tutor ceased after her marriage, believing if still it continued that other proofs of their dastardly plots would be forthcoming. Thrusting his hand again into the aperture from which he took the two tributes of his wife's tutor, there appeared nothing to arouse further suspicion, save a Christmas card, written with the same bold hand. The lines were these:--
+
+[P05] "Accept my warmest greeting, friendship, love,
+ Thou art my charming Irene, pet and dove;
+ Although another claims thee for a time,
+ I trust to call you some day ever mine.
+ Oh! pray for parting soon with fettered chains,
+ To live and move regardless of those reins
+ That bind your Christmas sprigs of worldly woe
+ To him, whom you have hated long ago."
+
+--- BATCH 1 RAW ---
+SAY: Sir John | Great heaven! Am I blind to touch or truth? Am I at last to labour under the fact that my wife loves another! she who only some months since protested her innocence in such strains as to cause the most doubtful to stay alarm. Here is the ring, and there lies the note--the note of him who claims to be not only her tutor but suitor. Why did she accept the former or cause the latter to be written? @P03
+SAY: Sir John | Then, the date! Just one month exactly before our marriage; and how I pined for it to elapse whilst another would eagerly have prolonged it. Oh, Irene!--false and low woman! Think you that any longer I can own you as wife or treat you with the respect a wife deserves! @P04
+SAY: Sir John | Thrusting his hand again into the aperture from which he took the two tributes of his wife's tutor, there appeared nothing to arouse further suspicion, save a Christmas card, written with the same bold hand. The lines were these:-- @P04
+SAY: Sir John | Accept my warmest greeting, friendship, love, Thou art my charming Irene, pet and dove; Although another claims thee for a time, I trust to call you some day ever mine. Oh! pray for parting soon with fettered chains, To live and move regardless of those reins That bind your Christmas sprigs of worldly woe To him, whom you have hated long ago. @P05
+elapsed: 13.68s
+
+BATCH 1 PROVENANCE COMPLETED: 0
+
+--- BATCH 1 PARSED ---
+SAY: Sir John | Great heaven! Am I blind to touch or truth? Am I at last to labour under the fact that my wife loves another! she who only some months since protested her innocence in such strains as to cause the most doubtful to stay alarm. Here is the ring, and there lies the note--the note of him who claims to be not only her tutor but suitor. Why did she accept the former or cause the latter to be written? @ [3]
+SAY: Sir John | Then, the date! Just one month exactly before our marriage; and how I pined for it to elapse whilst another would eagerly have prolonged it. Oh, Irene!--false and low woman! Think you that any longer I can own you as wife or treat you with the respect a wife deserves! @ [4]
+SAY: Sir John | Thrusting his hand again into the aperture from which he took the two tributes of his wife's tutor, there appeared nothing to arouse further suspicion, save a Christmas card, written with the same bold hand. The lines were these:-- @ [4]
+SAY: Sir John | Accept my warmest greeting, friendship, love, Thou art my charming Irene, pet and dove; Although another claims thee for a time, I trust to call you some day ever mine. Oh! pray for parting soon with fettered chains, To live and move regardless of those reins That bind your Christmas sprigs of worldly woe To him, whom you have hated long ago. @ [5]
+
+BATCH 1 PARSE STATS: {'parsed': 4, 'ignored': 0, 'quarantined': 0, 'no_span': 0, 'span_needed': 4, 'span_valid': 4, 'span_validity': 1.0, 'junk_ratio': 0.0, 'content_count': 4, 'repaired_prefix': 0, 'disallowed': 0, 'shape_invalid': 0, 'end_tail_miss': 0}
+
+######################################################################################################################
+BATCH 2/10 targets=[9]
+######################################################################################################################
+
+--- BATCH 2 USER MESSAGE ---
+Extract ONLY speech actually spoken aloud from these paragraphs.
+
+[P09] Instantly ordering a maid to send for Doctor Doherty, the false invalid lay back on her pillow, appearing not much concerned. On the doctor's arrival he applied restoratives, but without the desired effect. Then he ordered his instant removal to his bed-chamber, where every care and watchfulness was extended him by Rachel Hyde.
+
+--- BATCH 2 RAW ---
+SAY: Rachel Hyde | Instantly ordering a maid to send for Doctor Doherty
+SAY: Doctor Doherty | appearing not much concerned
+SAY: Doctor Doherty | without the desired effect
+SAY: Doctor Doherty | ordered his instant removal to his bed-chamber
+elapsed: 1.79s
+
+BATCH 2 PROVENANCE COMPLETED: 4
+
+--- BATCH 2 AFTER D2A ---
+SAY: Rachel Hyde | Instantly ordering a maid to send for Doctor Doherty @P09
+SAY: Doctor Doherty | appearing not much concerned @P09
+SAY: Doctor Doherty | without the desired effect @P09
+SAY: Doctor Doherty | ordered his instant removal to his bed-chamber @P09
+
+--- BATCH 2 PARSED ---
+SAY: Rachel Hyde | Instantly ordering a maid to send for Doctor Doherty @ [9]
+SAY: Doctor Doherty | appearing not much concerned @ [9]
+SAY: Doctor Doherty | without the desired effect @ [9]
+SAY: Doctor Doherty | ordered his instant removal to his bed-chamber @ [9]
+
+BATCH 2 PARSE STATS: {'parsed': 4, 'ignored': 0, 'quarantined': 0, 'no_span': 0, 'span_needed': 4, 'span_valid': 4, 'span_validity': 1.0, 'junk_ratio': 0.0, 'content_count': 4, 'repaired_prefix': 0, 'disallowed': 0, 'shape_invalid': 0, 'end_tail_miss': 0}
+
+######################################################################################################################
+BATCH 3/10 targets=[12]
+######################################################################################################################
+
+--- BATCH 3 USER MESSAGE ---
+Extract ONLY speech actually spoken aloud from these paragraphs.
+
+[P12] Lady Dunfern could not help noticing the strange and frozen manner of her husband since the eve of his illness. At first she was inclined to fear his approach, but gradually she felt convinced he was slightly affected with a mild form of insanity; and making minute inquiries from the oldest inhabitants in the neighbourhood and adjoining village as to the accuracy of her fears, she was informed that "such never existed amongst his ancestors, so far as they knew or heard."
+
+--- BATCH 3 RAW ---
+SAY: Lady Dunfern | "such never existed amongst his ancestors, so far as they knew or heard." @P12
+elapsed: 0.78s
+
+BATCH 3 PROVENANCE COMPLETED: 0
+
+--- BATCH 3 PARSED ---
+SAY: Lady Dunfern | "such never existed amongst his ancestors, so far as they knew or heard." @ [12]
+
+BATCH 3 PARSE STATS: {'parsed': 1, 'ignored': 0, 'quarantined': 0, 'no_span': 0, 'span_needed': 1, 'span_valid': 1, 'span_validity': 1.0, 'junk_ratio': 0.0, 'content_count': 1, 'repaired_prefix': 0, 'disallowed': 0, 'shape_invalid': 0, 'end_tail_miss': 0}
+
+######################################################################################################################
+BATCH 4/10 targets=[15, 16, 17]
+######################################################################################################################
+
+--- BATCH 4 USER MESSAGE ---
+Extract ONLY speech actually spoken aloud from these paragraphs.
+
+[P15] After serious thought, Sir John began to act; he was inclined to think delay would be dangerous, and on approaching his breakfast table one morning soon after his recovery, he hinted to his housekeeper that he "wished a private interview with her after his morning repast." This Rachel punctually obeyed.
+
+[P16] Seeing her master's trembling hand twitch the tips of his beard, she feared something dreadful must surely be disturbing his peace of mind, and commanding her to "lock the door" lest they should be interrupted, he informed her of all that had happened.
+
+[P17] Rachel, ever ready to sow doubt in the mind of her master regarding his wife, manifested her want of surprise by relating some incidents which occurred under her notice. Nothing, however monstrous, could astonish Sir John at this time regarding his wife's movements, and informing Rachel of his intention he ordered the key of one of the rooms that yet had been shut against the entrance of Lady Dunfern.
+
+--- BATCH 4 RAW ---
+SAY: Sir John | "wished a private interview with her after his morning repast." @P15
+SAY: Rachel | "lock the door" @P16
+SAY: Sir John | informing Rachel of his intention he ordered the key of one of the rooms that yet had been shut against the entrance of Lady Dunfern. @P17
+elapsed: 1.98s
+
+BATCH 4 PROVENANCE COMPLETED: 0
+
+--- BATCH 4 PARSED ---
+SAY: Sir John | "wished a private interview with her after his morning repast." @ [15]
+SAY: Rachel | "lock the door" @ [16]
+SAY: Sir John | informing Rachel of his intention he ordered the key of one of the rooms that yet had been shut against the entrance of Lady Dunfern. @ [17]
+
+BATCH 4 PARSE STATS: {'parsed': 3, 'ignored': 0, 'quarantined': 0, 'no_span': 0, 'span_needed': 3, 'span_valid': 3, 'span_validity': 1.0, 'junk_ratio': 0.0, 'content_count': 3, 'repaired_prefix': 0, 'disallowed': 0, 'shape_invalid': 0, 'end_tail_miss': 0}
+
+######################################################################################################################
+BATCH 5/10 targets=[17, 18, 19]
+######################################################################################################################
+
+--- BATCH 5 USER MESSAGE ---
+Extract ONLY speech actually spoken aloud from these paragraphs.
+
+[P17] Rachel, ever ready to sow doubt in the mind of her master regarding his wife, manifested her want of surprise by relating some incidents which occurred under her notice. Nothing, however monstrous, could astonish Sir John at this time regarding his wife's movements, and informing Rachel of his intention he ordered the key of one of the rooms that yet had been shut against the entrance of Lady Dunfern.
+
+[P18] Hastening to fulfil her master's order, Rachel returned with the mighty key, and handed it to Sir John, who moved to the door, and thrusting the rusty key into its aperture, succeeded with great difficulty in effecting an entrance. Rachel followed, and both entered, locking the heavy-panelled oak door from within. "This," said Sir John, "is the room of correction, the room of death. It defies escape or secretion. It has been so long as I remember held in abhorrence by my late lamented parents, and, so far as I can understand, by many of my ancestors.
+
+[P19] "First of all, the lady who shared its midst was a born imbecile, the eldest daughter of my great great grandfather--Sir Sydney Dunfern. She was nursed and tenderly cared for within these walls for a period of thirty-six years, and through the instantaneous insanity of her ward, was marked a victim for his murderous hand. Yes, it has been related that during midnight, when she was fast asleep, he drew from that drawer" here Sir John pointed to the wardrobe, "a weapon of warlike design, and severed her head almost from her body, causing instant death.
+
+--- BATCH 5 RAW ---
+SAY: Rachel | relating some incidents which occurred under her notice @P17
+SAY: Sir John | "This," said Sir John, "is the room of correction, the room of death. It defies escape or secretion. It has been so long as I remember held in abhorrence by my late lamented parents, and, so far as I can understand, by many of my ancestors." @P18
+SAY: Sir John | "Yes, it has been related that during midnight, when she was fast asleep, he drew from that drawer" here Sir John pointed to the wardrobe, "a weapon of warlike design, and severed her head almost from her body, causing instant death. @P19
+elapsed: 2.80s
+
+BATCH 5 PROVENANCE COMPLETED: 0
+
+--- BATCH 5 PARSED ---
+SAY: Rachel | relating some incidents which occurred under her notice @ [17]
+SAY: Sir John | "This," said Sir John, "is the room of correction, the room of death. It defies escape or secretion. It has been so long as I remember held in abhorrence by my late lamented parents, and, so far as I can understand, by many of my ancestors." @ [18]
+SAY: Sir John | "Yes, it has been related that during midnight, when she was fast asleep, he drew from that drawer" here Sir John pointed to the wardrobe, "a weapon of warlike design, and severed her head almost from her body, causing instant death. @ [19]
+
+BATCH 5 PARSE STATS: {'parsed': 3, 'ignored': 0, 'quarantined': 0, 'no_span': 0, 'span_needed': 3, 'span_valid': 3, 'span_validity': 1.0, 'junk_ratio': 0.0, 'content_count': 3, 'repaired_prefix': 0, 'disallowed': 0, 'shape_invalid': 0, 'end_tail_miss': 0}
+
+######################################################################################################################
+BATCH 6/10 targets=[19, 20, 21]
+######################################################################################################################
+
+--- BATCH 6 USER MESSAGE ---
+Extract ONLY speech actually spoken aloud from these paragraphs.
+
+[P19] "First of all, the lady who shared its midst was a born imbecile, the eldest daughter of my great great grandfather--Sir Sydney Dunfern. She was nursed and tenderly cared for within these walls for a period of thirty-six years, and through the instantaneous insanity of her ward, was marked a victim for his murderous hand. Yes, it has been related that during midnight, when she was fast asleep, he drew from that drawer" here Sir John pointed to the wardrobe, "a weapon of warlike design, and severed her head almost from her body, causing instant death.
+
+[P20] "It was not known until next day about noon that anything extraordinary had happened. It was first detected by Sir Sydney himself, who became alarmed at not having seen Wade--the ward's name was Hector Wade--as usual at ten o'clock, and tapping at the door, was surprised to hear some noise issue from within. Being of a hasty temper, he became indignant at the ward's indifference, and calling loudly, finally gained admittance.
+
+[P21] "The murderer had her stretched on this floor, and every article capable of being removed piled upon her corpse. Horrified at such a sight, Sir Sydney became wild with grief, and at once handed the pitiful lunatic over to those in authority.
+
+--- BATCH 6 RAW ---
+SAY: Sir Sydney | "First of all, the lady who shared its midst was a born imbecile, the eldest daughter of my great great grandfather--Sir Sydney Dunfern. She was nursed and tenderly cared for within these walls for a period of thirty-six years, and through the instantaneous insanity of her ward, was marked a victim for his murderous hand. Yes, it has been related that during midnight, when she was fast asleep, he drew from that drawer" @P19
+SAY: Sir John | "a weapon of warlike design, and severed her head almost from her body, causing instant death." @P19
+SAY: Sir Sydney | "It was not known until next day about noon that anything extraordinary had happened. It was first detected by Sir Sydney himself, who became alarmed at not having seen Wade--the ward's name was Hector Wade--as usual at ten o'clock, and tapping at the door, was surprised to hear some noise issue from within." @P20
+SAY: Sir Sydney | "Being of a hasty temper, he became indignant at the ward's indifference, and calling loudly, finally gained admittance." @P20
+SAY: Sir Sydney | "The murderer had her stretched on this floor, and every article capable of being removed piled upon her corpse. Horrified at such a sight, Sir Sydney became wild with grief, and at once handed the pitiful lunatic over to those in authority." @P21
+elapsed: 12.62s
+
+BATCH 6 PROVENANCE COMPLETED: 0
+
+--- BATCH 6 PARSED ---
+SAY: Sir Sydney | "First of all, the lady who shared its midst was a born imbecile, the eldest daughter of my great great grandfather--Sir Sydney Dunfern. She was nursed and tenderly cared for within these walls for a period of thirty-six years, and through the instantaneous insanity of her ward, was marked a victim for his murderous hand. Yes, it has been related that during midnight, when she was fast asleep, he drew from that drawer" @ [19]
+SAY: Sir John | "a weapon of warlike design, and severed her head almost from her body, causing instant death." @ [19]
+SAY: Sir Sydney | "It was not known until next day about noon that anything extraordinary had happened. It was first detected by Sir Sydney himself, who became alarmed at not having seen Wade--the ward's name was Hector Wade--as usual at ten o'clock, and tapping at the door, was surprised to hear some noise issue from within." @ [20]
+SAY: Sir Sydney | "Being of a hasty temper, he became indignant at the ward's indifference, and calling loudly, finally gained admittance." @ [20]
+SAY: Sir Sydney | "The murderer had her stretched on this floor, and every article capable of being removed piled upon her corpse. Horrified at such a sight, Sir Sydney became wild with grief, and at once handed the pitiful lunatic over to those in authority." @ [21]
+
+BATCH 6 PARSE STATS: {'parsed': 5, 'ignored': 0, 'quarantined': 0, 'no_span': 0, 'span_needed': 5, 'span_valid': 5, 'span_validity': 1.0, 'junk_ratio': 0.0, 'content_count': 5, 'repaired_prefix': 0, 'disallowed': 0, 'shape_invalid': 0, 'end_tail_miss': 0}
+
+######################################################################################################################
+BATCH 7/10 targets=[21, 22, 23]
+######################################################################################################################
+
+--- BATCH 7 USER MESSAGE ---
+Extract ONLY speech actually spoken aloud from these paragraphs.
+
+[P21] "The murderer had her stretched on this floor, and every article capable of being removed piled upon her corpse. Horrified at such a sight, Sir Sydney became wild with grief, and at once handed the pitiful lunatic over to those in authority.
+
+[P22] "The next inhabitant doomed to share in its dull delight was Kathleen, wife of my beloved grandfather, a beautiful woman, whose portrait you now see. She, I am sorry to relate, proved more an accomplice than the honoured wife of him who added so much to the welfare of those who now benefit by his great economy. The hand of death visited her here likewise with its separating touch.
+
+[P23] "The last person inhabiting its cheerless enclosure was a distant relative of my mother, a gentleman named Rodney Rupert, who fell from the path of virtue and trod the field of vice, until confined within this prison of pathetic account, and who, in a moment of passion, ended his days with that pistol which hangs on yonder hook, and on that bed all these lay, and which shall again be made use of by a traitoress of no mean account either."
+
+--- BATCH 7 RAW ---
+SAY: Sir Sydney | Horrified at such a sight, Sir Sydney became wild with grief, and at once handed the pitiful lunatic over to those in authority. @P21
+SAY: Kathleen | She, I am sorry to relate, proved more an accomplice than the honoured wife of him who added so much to the welfare of those who now benefit by his great economy. @P22
+SAY: Rodney Rupert | who fell from the path of virtue and trod the field of vice, until confined within this prison of pathetic account, and who, in a moment of passion, ended his days with that pistol which hangs on yonder hook @P23
+elapsed: 2.38s
+
+BATCH 7 PROVENANCE COMPLETED: 0
+
+--- BATCH 7 PARSED ---
+SAY: Sir Sydney | Horrified at such a sight, Sir Sydney became wild with grief, and at once handed the pitiful lunatic over to those in authority. @ [21]
+SAY: Kathleen | She, I am sorry to relate, proved more an accomplice than the honoured wife of him who added so much to the welfare of those who now benefit by his great economy. @ [22]
+SAY: Rodney Rupert | who fell from the path of virtue and trod the field of vice, until confined within this prison of pathetic account, and who, in a moment of passion, ended his days with that pistol which hangs on yonder hook @ [23]
+
+BATCH 7 PARSE STATS: {'parsed': 3, 'ignored': 0, 'quarantined': 0, 'no_span': 0, 'span_needed': 3, 'span_valid': 3, 'span_validity': 1.0, 'junk_ratio': 0.0, 'content_count': 3, 'repaired_prefix': 0, 'disallowed': 0, 'shape_invalid': 0, 'end_tail_miss': 0}
+
+######################################################################################################################
+BATCH 8/10 targets=[23, 24]
+######################################################################################################################
+
+--- BATCH 8 USER MESSAGE ---
+Extract ONLY speech actually spoken aloud from these paragraphs.
+
+[P23] "The last person inhabiting its cheerless enclosure was a distant relative of my mother, a gentleman named Rodney Rupert, who fell from the path of virtue and trod the field of vice, until confined within this prison of pathetic account, and who, in a moment of passion, ended his days with that pistol which hangs on yonder hook, and on that bed all these lay, and which shall again be made use of by a traitoress of no mean account either."
+
+[P24] Sir John then proceeded to give orders to "have the room made as comfortable as its scanty furniture permitted," which consisted only of one small table, one chair, and an old-fashioned wardrobe, with several small drawers attached, one dressing-table and wash-stand, all of which were magnificently carved oak and richly panelled.
+
+--- BATCH 8 RAW ---
+SAY: Rodney Rupert | "The last person inhabiting its cheerless enclosure was a distant relative of my mother, a gentleman named Rodney Rupert, who fell from the path of virtue and trod the field of vice, until confined within this prison of pathetic account, and who, in a moment of passion, ended his days with that pistol which hangs on yonder hook, and on that bed all these lay, and which shall again be made use of by a traitoress of no mean account either." @P23
+elapsed: 1.78s
+
+BATCH 8 PROVENANCE COMPLETED: 0
+
+--- BATCH 8 PARSED ---
+SAY: Rodney Rupert | "The last person inhabiting its cheerless enclosure was a distant relative of my mother, a gentleman named Rodney Rupert, who fell from the path of virtue and trod the field of vice, until confined within this prison of pathetic account, and who, in a moment of passion, ended his days with that pistol which hangs on yonder hook, and on that bed all these lay, and which shall again be made use of by a traitoress of no mean account either." @ [23]
+
+BATCH 8 PARSE STATS: {'parsed': 1, 'ignored': 0, 'quarantined': 0, 'no_span': 0, 'span_needed': 1, 'span_valid': 1, 'span_validity': 1.0, 'junk_ratio': 0.0, 'content_count': 1, 'repaired_prefix': 0, 'disallowed': 0, 'shape_invalid': 0, 'end_tail_miss': 0}
+
+######################################################################################################################
+BATCH 9/10 targets=[28, 29, 30]
+######################################################################################################################
+
+--- BATCH 9 USER MESSAGE ---
+Extract ONLY speech actually spoken aloud from these paragraphs.
+
+[P28] Rachel, after receiving orders in confidence from her master, set matters to right by lighting a fire, dusting the old and much-worn furniture, airing the bed-clothes, etc., being strictly charged to admit, on no pretence whatever, now or at any time, any member of the household or visitor to the mansion.
+
+[P29] When everything was in perfect readiness for the reception of its guest, Sir John directed Rachel to "bring her Ladyship into his presence." What could have astonished Lady Dunfern more on being ushered into a room which never before was open for her inspection? Nothing save the information her husband eagerly awaited her to receive. On being informed of her vast deception, which was proved beyond doubt, and to which she felt wholly incompetent to reply, she was absolutely dumb-stricken.
+
+[P30] It required no further questioning now concerning her husband's recent strangeness of manner and rigid coolness with which he was forced to treat her whom he scorned to call wife.
+
+--- BATCH 9 RAW ---
+SAY: Rachel | “being strictly charged to admit, on no pretence whatever, now or at any time, any member of the household or visitor to the mansion.” @P28
+SAY: Sir John | “bring her Ladyship into his presence.” @P29
+SAY: Lady Dunfern | “Nothing save the information her husband eagerly awaited her to receive.” @P29
+SAY: Lady Dunfern | “she was absolutely dumb-stricken.” @P29
+elapsed: 2.04s
+
+BATCH 9 PROVENANCE COMPLETED: 0
+
+--- BATCH 9 PARSED ---
+SAY: Rachel | “being strictly charged to admit, on no pretence whatever, now or at any time, any member of the household or visitor to the mansion.” @ [28]
+SAY: Sir John | “bring her Ladyship into his presence.” @ [29]
+SAY: Lady Dunfern | “Nothing save the information her husband eagerly awaited her to receive.” @ [29]
+SAY: Lady Dunfern | “she was absolutely dumb-stricken.” @ [29]
+
+BATCH 9 PARSE STATS: {'parsed': 4, 'ignored': 0, 'quarantined': 0, 'no_span': 0, 'span_needed': 4, 'span_valid': 4, 'span_validity': 1.0, 'junk_ratio': 0.0, 'content_count': 4, 'repaired_prefix': 0, 'disallowed': 0, 'shape_invalid': 0, 'end_tail_miss': 0}
+
+######################################################################################################################
+BATCH 10/10 targets=[30, 31, 32]
+######################################################################################################################
+
+--- BATCH 10 USER MESSAGE ---
+Extract ONLY speech actually spoken aloud from these paragraphs.
+
+[P30] It required no further questioning now concerning her husband's recent strangeness of manner and rigid coolness with which he was forced to treat her whom he scorned to call wife.
+
+[P31] "You, madam," said he, "have by your conduct, both before and after marriage, forced me to keep you a prisoner within these walls so long as you live or I exist.
+
+[P32] "You have not failed to act the infamous by kissing me with the lips of a Judas! You have at last plunged me into deepest disgrace, not alone me, but him whom you should have been liberated to succour and chastise. Mocking wretch! your foul deeds shall have plenty of scope here for improvement, and a prisoner you shall be during the remainder of your life."
+
+--- BATCH 10 RAW ---
+SAY: Edward | You, madam, have by your conduct, both before and after marriage, forced me to keep you a prisoner within these walls so long as you live or I exist. @P31
+SAY: Edward | You have not failed to act the infamous by kissing me with the lips of a Judas! You have at last plunged me into deepest disgrace, not alone me, but him whom you should have been liberated to succour and chastise. Mocking wretch! your foul deeds shall have plenty of scope here for improvement, and a prisoner you shall be during the remainder of your life. @P32
+elapsed: 2.18s
+
+BATCH 10 PROVENANCE COMPLETED: 0
+
+--- BATCH 10 PARSED ---
+SAY: Edward | You, madam, have by your conduct, both before and after marriage, forced me to keep you a prisoner within these walls so long as you live or I exist. @ [31]
+SAY: Edward | You have not failed to act the infamous by kissing me with the lips of a Judas! You have at last plunged me into deepest disgrace, not alone me, but him whom you should have been liberated to succour and chastise. Mocking wretch! your foul deeds shall have plenty of scope here for improvement, and a prisoner you shall be during the remainder of your life. @ [32]
+
+BATCH 10 PARSE STATS: {'parsed': 2, 'ignored': 0, 'quarantined': 0, 'no_span': 0, 'span_needed': 2, 'span_valid': 2, 'span_validity': 1.0, 'junk_ratio': 0.0, 'content_count': 2, 'repaired_prefix': 0, 'disallowed': 0, 'shape_invalid': 0, 'end_tail_miss': 0}
+
+======================================================================================================================
+--- MERGED BEFORE SANITIZER ---
+======================================================================================================================
+SAY: Sir John | Great heaven! Am I blind to touch or truth? Am I at last to labour under the fact that my wife loves another! she who only some months since protested her innocence in such strains as to cause the most doubtful to stay alarm. Here is the ring, and there lies the note--the note of him who claims to be not only her tutor but suitor. Why did she accept the former or cause the latter to be written? @ [3]
+SAY: Sir John | Then, the date! Just one month exactly before our marriage; and how I pined for it to elapse whilst another would eagerly have prolonged it. Oh, Irene!--false and low woman! Think you that any longer I can own you as wife or treat you with the respect a wife deserves! @ [4]
+SAY: Sir John | Thrusting his hand again into the aperture from which he took the two tributes of his wife's tutor, there appeared nothing to arouse further suspicion, save a Christmas card, written with the same bold hand. The lines were these:-- @ [4]
+SAY: Sir John | Accept my warmest greeting, friendship, love, Thou art my charming Irene, pet and dove; Although another claims thee for a time, I trust to call you some day ever mine. Oh! pray for parting soon with fettered chains, To live and move regardless of those reins That bind your Christmas sprigs of worldly woe To him, whom you have hated long ago. @ [5]
+SAY: Rachel Hyde | Instantly ordering a maid to send for Doctor Doherty @ [9]
+SAY: Doctor Doherty | appearing not much concerned @ [9]
+SAY: Doctor Doherty | without the desired effect @ [9]
+SAY: Doctor Doherty | ordered his instant removal to his bed-chamber @ [9]
+SAY: Lady Dunfern | "such never existed amongst his ancestors, so far as they knew or heard." @ [12]
+SAY: Sir John | "wished a private interview with her after his morning repast." @ [15]
+SAY: Rachel | "lock the door" @ [16]
+SAY: Sir John | informing Rachel of his intention he ordered the key of one of the rooms that yet had been shut against the entrance of Lady Dunfern. @ [17]
+SAY: Rachel | relating some incidents which occurred under her notice @ [17]
+SAY: Sir John | "This," said Sir John, "is the room of correction, the room of death. It defies escape or secretion. It has been so long as I remember held in abhorrence by my late lamented parents, and, so far as I can understand, by many of my ancestors." @ [18]
+SAY: Sir John | "Yes, it has been related that during midnight, when she was fast asleep, he drew from that drawer" here Sir John pointed to the wardrobe, "a weapon of warlike design, and severed her head almost from her body, causing instant death. @ [19]
+SAY: Sir Sydney | "First of all, the lady who shared its midst was a born imbecile, the eldest daughter of my great great grandfather--Sir Sydney Dunfern. She was nursed and tenderly cared for within these walls for a period of thirty-six years, and through the instantaneous insanity of her ward, was marked a victim for his murderous hand. Yes, it has been related that during midnight, when she was fast asleep, he drew from that drawer" @ [19]
+SAY: Sir John | "a weapon of warlike design, and severed her head almost from her body, causing instant death." @ [19]
+SAY: Sir Sydney | "It was not known until next day about noon that anything extraordinary had happened. It was first detected by Sir Sydney himself, who became alarmed at not having seen Wade--the ward's name was Hector Wade--as usual at ten o'clock, and tapping at the door, was surprised to hear some noise issue from within." @ [20]
+SAY: Sir Sydney | "Being of a hasty temper, he became indignant at the ward's indifference, and calling loudly, finally gained admittance." @ [20]
+SAY: Sir Sydney | "The murderer had her stretched on this floor, and every article capable of being removed piled upon her corpse. Horrified at such a sight, Sir Sydney became wild with grief, and at once handed the pitiful lunatic over to those in authority." @ [21]
+SAY: Sir Sydney | Horrified at such a sight, Sir Sydney became wild with grief, and at once handed the pitiful lunatic over to those in authority. @ [21]
+SAY: Kathleen | She, I am sorry to relate, proved more an accomplice than the honoured wife of him who added so much to the welfare of those who now benefit by his great economy. @ [22]
+SAY: Rodney Rupert | who fell from the path of virtue and trod the field of vice, until confined within this prison of pathetic account, and who, in a moment of passion, ended his days with that pistol which hangs on yonder hook @ [23]
+SAY: Rodney Rupert | "The last person inhabiting its cheerless enclosure was a distant relative of my mother, a gentleman named Rodney Rupert, who fell from the path of virtue and trod the field of vice, until confined within this prison of pathetic account, and who, in a moment of passion, ended his days with that pistol which hangs on yonder hook, and on that bed all these lay, and which shall again be made use of by a traitoress of no mean account either." @ [23]
+SAY: Rachel | “being strictly charged to admit, on no pretence whatever, now or at any time, any member of the household or visitor to the mansion.” @ [28]
+SAY: Sir John | “bring her Ladyship into his presence.” @ [29]
+SAY: Lady Dunfern | “Nothing save the information her husband eagerly awaited her to receive.” @ [29]
+SAY: Lady Dunfern | “she was absolutely dumb-stricken.” @ [29]
+SAY: Edward | You, madam, have by your conduct, both before and after marriage, forced me to keep you a prisoner within these walls so long as you live or I exist. @ [31]
+SAY: Edward | You have not failed to act the infamous by kissing me with the lips of a Judas! You have at last plunged me into deepest disgrace, not alone me, but him whom you should have been liberated to succour and chastise. Mocking wretch! your foul deeds shall have plenty of scope here for improvement, and a prisoner you shall be during the remainder of your life. @ [32]
+
+MERGED STATS: {'parsed': 30, 'ignored': 0, 'quarantined': 0, 'no_span': 0, 'span_needed': 30, 'span_valid': 30, 'span_validity': 1.0, 'junk_ratio': 0.0, 'content_count': 30, 'repaired_prefix': 0, 'disallowed': 0, 'shape_invalid': 0, 'end_tail_miss': 0}
+TOTAL PROVENANCE COMPLETED: 4
+
+======================================================================================================================
+--- AFTER CURRENT SAY SANITIZER ---
+======================================================================================================================
+SAY: Sir John | "This," said Sir John, "is the room of correction, the room of death. It defies escape or secretion. It has been so long as I remember held in abhorrence by my late lamented parents, and, so far as I can understand, by many of my ancestors." @ [18]
+SAY: Sir John | "Yes, it has been related that during midnight, when she was fast asleep, he drew from that drawer" here Sir John pointed to the wardrobe, "a weapon of warlike design, and severed her head almost from her body, causing instant death. @ [19]
+SAY: Sir John | "a weapon of warlike design, and severed her head almost from her body, causing instant death." @ [19]
+
+FINAL SANITIZER STATS: {'parsed': 3, 'ignored': 0, 'quarantined': 0, 'no_span': 0, 'span_needed': 30, 'span_valid': 30, 'span_validity': 1.0, 'junk_ratio': 0.0, 'content_count': 3, 'repaired_prefix': 0, 'disallowed': 0, 'shape_invalid': 0, 'end_tail_miss': 0, 'say_provenance_relocated': 0, 'say_conflict_dropped': 0, 'say_conflict_resolved': 0, 'say_document_dropped': 1, 'say_unsupported_dropped': 24, 'say_speaker_surface_dropped': 2, 'say_duplicate_dropped': 0, 'say_direct_supported': 3, 'say_indirect_supported': 0, 'say_source_supported': 3, 'say_provenance_completed': 4}
+TOTAL SAY ELAPSED: 42.04s

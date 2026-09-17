@@ -13,7 +13,6 @@ from app.reader import (
     _extraction_chat,
     _repair_say_missing_provenance,
     _sanitize_say_coverage,
-    _say_cross_segment_open_run_seed,
     _say_coverage_batches,
     _say_segment_source_rows,
     _select_say_coverage_rows,
@@ -426,72 +425,10 @@ def main():
         #
         # IMPORTANT: sanitizer gets ALL segment-local SOURCE,
         # not only the selected generation targets.
-        # k2b diagnostic parity with production:
-        # derive cross-segment capability only from immutable SOURCE.
-        boundary_speaker = None
-
-        with connect() as boundary_con:
-            current_meta = boundary_con.execute(
-                """
-                SELECT book_id, idx, chapter
-                FROM segments
-                WHERE id=?
-                """,
-                (seg["id"],),
-            ).fetchone()
-
-            if (
-                current_meta is not None
-                and int(current_meta["idx"]) > 1
-            ):
-                previous_meta = boundary_con.execute(
-                    """
-                    SELECT id, chapter
-                    FROM segments
-                    WHERE book_id=?
-                      AND idx=?
-                    """,
-                    (
-                        current_meta["book_id"],
-                        int(current_meta["idx"]) - 1,
-                    ),
-                ).fetchone()
-
-                if previous_meta is not None:
-                    previous_rows = list(
-                        _say_segment_source_rows(
-                            boundary_con,
-                            previous_meta["id"],
-                        )
-                    )
-
-                    previous_source_by_local = {
-                        int(row["local_no"]):
-                            (row["text"] or "")
-                        for row in previous_rows
-                    }
-
-                    boundary_speaker = (
-                        _say_cross_segment_open_run_seed(
-                            previous_source_by_local,
-                            source_by_local,
-                            same_chapter=(
-                                previous_meta["chapter"]
-                                == current_meta["chapter"]
-                            ),
-                        )
-                    )
-
-        print(
-            "BOUNDARY SPEAKER:",
-            repr(boundary_speaker),
-        )
-
         clean = (
             _sanitize_say_coverage(
                 merged,
                 source_by_local,
-                boundary_speaker=boundary_speaker,
             )
         )
 

@@ -1,0 +1,307 @@
+SEGMENT GLOBAL CANDIDATES: [('SEGMENT_IDXS', [8, 11])]
+TRACE_PATCH BOOK_ID=365 SEGMENT_IDXS=[7, 9]
+
+======================================================================================================================
+SEG 7 chapter=7 tokens=2332
+======================================================================================================================
+
+SOURCE ROW COUNT: 27
+TARGET COUNT: 8
+BATCH COUNT: 5
+BATCH TARGETS: [[6], [15, 16, 17], [17, 18, 19], [19, 20], [23]]
+
+--- ALL TARGETS ---
+
+[P06] quotes=0
+Next day after Irene's marriage was a busy one at Dilworth Castle; hasty and numerous were the preparations for desolation and departure. Weeks preceding the joyful event, or what should have been, were leisurely devoted to the artistic arrangements in every room within the lordly manor. But, alas! so sudden now was joy's termination, that hours alone were the boundary of command.
+
+[P15] quotes=1
+"Tell me, I implore of you, Sir John and husband, why the once blithe and cheerful spot of peace is now apparently a dismal dungeon on the night of our home-coming, when all should have been a mass of dazzling glow and splendour?
+
+[P16] quotes=1
+"Can it be that she who proffered such ecstacy for months before, on the eve of our return, is now no more? or can it be possible that we have crossed each other on the wide waters of tossing triumph or wanton woe?
+
+[P17] quotes=2
+"Speak at once, for pity's sake! and do not hide from me the answer of truth and honest knowledge? Oh, merciful heavens!"
+
+[P18] quotes=0
+Here Lady Dunfern drooped her head before Sir John got time to even answer a word, and drawing from his pocket a silver flask, proceeded to open its contents, when the horses suddenly stopped, and a gentle hand politely opened the carriage door to eagerly await the exit of his master and future mistress from its cushioned corners of costly comfort and ease.
+
+[P19] quotes=4
+"Tom," cried Sir John, in great and rending agony, "kindly wait for a few minutes, as her ladyship has been frightfully overcome only a short time ago by the blank appearance in and around Dilworth Castle. She fears something dreadful must surely have happened Lady Dilworth in her absence, since she has failed to make the occasion of our home-coming a merry torchlight of rejoicing." Tom, who had been in Sir John's service for the past twenty years, was about to testify to the truth of his remarks, when he was joined by other members of the household, who rushed to welcome their beloved master home once more, accompanied by his beautiful bride, of whom they all had heard so much.
+
+[P20] quotes=0
+Sir John saw that delay was dangerous, and helping to remove his darling Irene from the seat on which she unconsciously reclined, succeeded in placing her on a low couch in the very room he so often silently prayed for her presence. Bathing her highly-heated temples with a sprinkling of cooling liquid concealed in his flask, Sir John lost no time in summoning the village doctor, who, on arrival, pronounced Lady Dunfern to have slightly recovered, and giving the necessary orders left the room.
+
+[P23] quotes=0
+Many, many were the questions asked by Lady Dunfern relative to Lady Dilworth when Dr. Corbett arrived next morning to pronounce her almost recovered, and, strange, yet true, that no one could possibly have humoured her in such a manner to warrant recovery as the village doctor, until she felt really strong enough to battle against the sorrowful tale of woe with which Sir John should shortly make her cognisant.
+
+######################################################################################################################
+BATCH 1/5 targets=[6]
+######################################################################################################################
+
+--- BATCH 1 USER MESSAGE ---
+Extract ONLY speech actually spoken aloud from these paragraphs.
+
+[P06] Next day after Irene's marriage was a busy one at Dilworth Castle; hasty and numerous were the preparations for desolation and departure. Weeks preceding the joyful event, or what should have been, were leisurely devoted to the artistic arrangements in every room within the lordly manor. But, alas! so sudden now was joy's termination, that hours alone were the boundary of command.
+
+--- BATCH 1 RAW ---
+SAY: Irene | hasty and numerous were the preparations for desolation and departure @P06
+elapsed: 1.13s
+
+BATCH 1 PROVENANCE COMPLETED: 0
+
+--- BATCH 1 PARSED ---
+SAY: Irene | hasty and numerous were the preparations for desolation and departure @ [6]
+
+BATCH 1 PARSE STATS: {'parsed': 1, 'ignored': 0, 'quarantined': 0, 'no_span': 0, 'span_needed': 1, 'span_valid': 1, 'span_validity': 1.0, 'junk_ratio': 0.0, 'content_count': 1, 'repaired_prefix': 0, 'disallowed': 0, 'shape_invalid': 0, 'end_tail_miss': 0}
+
+######################################################################################################################
+BATCH 2/5 targets=[15, 16, 17]
+######################################################################################################################
+
+--- BATCH 2 USER MESSAGE ---
+Extract ONLY speech actually spoken aloud from these paragraphs.
+
+[P15] "Tell me, I implore of you, Sir John and husband, why the once blithe and cheerful spot of peace is now apparently a dismal dungeon on the night of our home-coming, when all should have been a mass of dazzling glow and splendour?
+
+[P16] "Can it be that she who proffered such ecstacy for months before, on the eve of our return, is now no more? or can it be possible that we have crossed each other on the wide waters of tossing triumph or wanton woe?
+
+[P17] "Speak at once, for pity's sake! and do not hide from me the answer of truth and honest knowledge? Oh, merciful heavens!"
+
+--- BATCH 2 RAW ---
+SAY: Sir John and husband | "Tell me, I implore of you, why the once blithe and cheerful spot of peace is now apparently a dismal dungeon on the night of our home-coming, when all should have been a mass of dazzling glow and splendour?" @P15
+SAY: she who proffered such ecstacy | "Can it be that she who proffered such ecstacy for months before, on the eve of our return, is now no more? or can it be possible that we have crossed each other on the wide waters of tossing triumph or wanton woe?" @P16
+SAY: Speak at once, for pity's sake! | "Speak at once, for pity's sake! and do not hide from me the answer of truth and honest knowledge?" @P17
+SAY: Oh, merciful heavens! | "Oh, merciful heavens!" @P17
+elapsed: 2.96s
+
+BATCH 2 PROVENANCE COMPLETED: 0
+
+--- BATCH 2 PARSED ---
+SAY: Sir John and husband | "Tell me, I implore of you, why the once blithe and cheerful spot of peace is now apparently a dismal dungeon on the night of our home-coming, when all should have been a mass of dazzling glow and splendour?" @ [15]
+SAY: she who proffered such ecstacy | "Can it be that she who proffered such ecstacy for months before, on the eve of our return, is now no more? or can it be possible that we have crossed each other on the wide waters of tossing triumph or wanton woe?" @ [16]
+SAY: Speak at once, for pity's sake! | "Speak at once, for pity's sake! and do not hide from me the answer of truth and honest knowledge?" @ [17]
+SAY: Oh, merciful heavens! | "Oh, merciful heavens!" @ [17]
+
+BATCH 2 PARSE STATS: {'parsed': 4, 'ignored': 0, 'quarantined': 0, 'no_span': 0, 'span_needed': 4, 'span_valid': 4, 'span_validity': 1.0, 'junk_ratio': 0.0, 'content_count': 4, 'repaired_prefix': 0, 'disallowed': 0, 'shape_invalid': 0, 'end_tail_miss': 0}
+
+######################################################################################################################
+BATCH 3/5 targets=[17, 18, 19]
+######################################################################################################################
+
+--- BATCH 3 USER MESSAGE ---
+Extract ONLY speech actually spoken aloud from these paragraphs.
+
+[P17] "Speak at once, for pity's sake! and do not hide from me the answer of truth and honest knowledge? Oh, merciful heavens!"
+
+[P18] Here Lady Dunfern drooped her head before Sir John got time to even answer a word, and drawing from his pocket a silver flask, proceeded to open its contents, when the horses suddenly stopped, and a gentle hand politely opened the carriage door to eagerly await the exit of his master and future mistress from its cushioned corners of costly comfort and ease.
+
+[P19] "Tom," cried Sir John, in great and rending agony, "kindly wait for a few minutes, as her ladyship has been frightfully overcome only a short time ago by the blank appearance in and around Dilworth Castle. She fears something dreadful must surely have happened Lady Dilworth in her absence, since she has failed to make the occasion of our home-coming a merry torchlight of rejoicing." Tom, who had been in Sir John's service for the past twenty years, was about to testify to the truth of his remarks, when he was joined by other members of the household, who rushed to welcome their beloved master home once more, accompanied by his beautiful bride, of whom they all had heard so much.
+
+--- BATCH 3 RAW ---
+SAY: Lady Dunfern | "Speak at once, for pity’s sake! and do not hide from me the answer of truth and honest knowledge? Oh, merciful heavens!" @P17
+SAY: Sir John | "Tom, kindly wait for a few minutes, as her ladyship has been frightfully overcome only a short time ago by the blank appearance in and around Dilworth Castle. She fears something dreadful must surely have happened Lady Dilworth in her absence, since she has failed to make the occasion of our home-coming a merry torchlight of rejoicing." @P19
+elapsed: 2.08s
+
+BATCH 3 PROVENANCE COMPLETED: 0
+
+--- BATCH 3 PARSED ---
+SAY: Lady Dunfern | "Speak at once, for pity’s sake! and do not hide from me the answer of truth and honest knowledge? Oh, merciful heavens!" @ [17]
+SAY: Sir John | "Tom, kindly wait for a few minutes, as her ladyship has been frightfully overcome only a short time ago by the blank appearance in and around Dilworth Castle. She fears something dreadful must surely have happened Lady Dilworth in her absence, since she has failed to make the occasion of our home-coming a merry torchlight of rejoicing." @ [19]
+
+BATCH 3 PARSE STATS: {'parsed': 2, 'ignored': 0, 'quarantined': 0, 'no_span': 0, 'span_needed': 2, 'span_valid': 2, 'span_validity': 1.0, 'junk_ratio': 0.0, 'content_count': 2, 'repaired_prefix': 0, 'disallowed': 0, 'shape_invalid': 0, 'end_tail_miss': 0}
+
+######################################################################################################################
+BATCH 4/5 targets=[19, 20]
+######################################################################################################################
+
+--- BATCH 4 USER MESSAGE ---
+Extract ONLY speech actually spoken aloud from these paragraphs.
+
+[P19] "Tom," cried Sir John, in great and rending agony, "kindly wait for a few minutes, as her ladyship has been frightfully overcome only a short time ago by the blank appearance in and around Dilworth Castle. She fears something dreadful must surely have happened Lady Dilworth in her absence, since she has failed to make the occasion of our home-coming a merry torchlight of rejoicing." Tom, who had been in Sir John's service for the past twenty years, was about to testify to the truth of his remarks, when he was joined by other members of the household, who rushed to welcome their beloved master home once more, accompanied by his beautiful bride, of whom they all had heard so much.
+
+[P20] Sir John saw that delay was dangerous, and helping to remove his darling Irene from the seat on which she unconsciously reclined, succeeded in placing her on a low couch in the very room he so often silently prayed for her presence. Bathing her highly-heated temples with a sprinkling of cooling liquid concealed in his flask, Sir John lost no time in summoning the village doctor, who, on arrival, pronounced Lady Dunfern to have slightly recovered, and giving the necessary orders left the room.
+
+--- BATCH 4 RAW ---
+SAY: Sir John | “Tom, kindly wait for a few minutes, as her ladyship has been frightfully overcome only a short time ago by the blank appearance in and around Dilworth Castle. She fears something dreadful must surely have happened Lady Dilworth in her absence, since she has failed to make the occasion of our home-coming a merry torchlight of rejoicing.” @P19
+SAY: Tom | “Tom, who had been in Sir John's service for the past twenty years, was about to testify to the truth of his remarks” @P19
+SAY: Sir John | “Sir John saw that delay was dangerous, and helping to remove his darling Irene from the seat on which she unconsciously reclined” @P20
+SAY: Sir John | “succeeded in placing her on a low couch in the very room he so often silently prayed for her presence” @P20
+SAY: Sir John | “Bathing her highly-heated temples with a sprinkling of cooling liquid concealed in his flask” @P20
+SAY: Sir John | “lost no time in summoning the village doctor” @P20
+SAY: Village doctor | “Lady Dunfern to have slightly recovered, and giving the necessary orders left the room” @P20
+elapsed: 3.88s
+
+BATCH 4 PROVENANCE COMPLETED: 0
+
+--- BATCH 4 PARSED ---
+SAY: Sir John | “Tom, kindly wait for a few minutes, as her ladyship has been frightfully overcome only a short time ago by the blank appearance in and around Dilworth Castle. She fears something dreadful must surely have happened Lady Dilworth in her absence, since she has failed to make the occasion of our home-coming a merry torchlight of rejoicing.” @ [19]
+SAY: Tom | “Tom, who had been in Sir John's service for the past twenty years, was about to testify to the truth of his remarks” @ [19]
+SAY: Sir John | “Sir John saw that delay was dangerous, and helping to remove his darling Irene from the seat on which she unconsciously reclined” @ [20]
+SAY: Sir John | “succeeded in placing her on a low couch in the very room he so often silently prayed for her presence” @ [20]
+SAY: Sir John | “Bathing her highly-heated temples with a sprinkling of cooling liquid concealed in his flask” @ [20]
+SAY: Sir John | “lost no time in summoning the village doctor” @ [20]
+SAY: Village doctor | “Lady Dunfern to have slightly recovered, and giving the necessary orders left the room” @ [20]
+
+BATCH 4 PARSE STATS: {'parsed': 7, 'ignored': 0, 'quarantined': 0, 'no_span': 0, 'span_needed': 7, 'span_valid': 7, 'span_validity': 1.0, 'junk_ratio': 0.0, 'content_count': 7, 'repaired_prefix': 0, 'disallowed': 0, 'shape_invalid': 0, 'end_tail_miss': 0}
+
+######################################################################################################################
+BATCH 5/5 targets=[23]
+######################################################################################################################
+
+--- BATCH 5 USER MESSAGE ---
+Extract ONLY speech actually spoken aloud from these paragraphs.
+
+[P23] Many, many were the questions asked by Lady Dunfern relative to Lady Dilworth when Dr. Corbett arrived next morning to pronounce her almost recovered, and, strange, yet true, that no one could possibly have humoured her in such a manner to warrant recovery as the village doctor, until she felt really strong enough to battle against the sorrowful tale of woe with which Sir John should shortly make her cognisant.
+
+--- BATCH 5 RAW ---
+SAY: Lady Dunfern | Many, many were the questions asked by Lady Dunfern relative to Lady Dilworth
+SAY: Dr. Corbett | strange, yet true, that no one could possibly have humoured her in such a manner to warrant recovery
+SAY: Dr. Corbett | until she felt really strong enough to battle against the sorrowful tale of woe with which Sir John should shortly make her cognisant
+elapsed: 1.40s
+
+BATCH 5 PROVENANCE COMPLETED: 3
+
+--- BATCH 5 AFTER D2A ---
+SAY: Lady Dunfern | Many, many were the questions asked by Lady Dunfern relative to Lady Dilworth @P23
+SAY: Dr. Corbett | strange, yet true, that no one could possibly have humoured her in such a manner to warrant recovery @P23
+SAY: Dr. Corbett | until she felt really strong enough to battle against the sorrowful tale of woe with which Sir John should shortly make her cognisant @P23
+
+--- BATCH 5 PARSED ---
+SAY: Lady Dunfern | Many, many were the questions asked by Lady Dunfern relative to Lady Dilworth @ [23]
+SAY: Dr. Corbett | strange, yet true, that no one could possibly have humoured her in such a manner to warrant recovery @ [23]
+SAY: Dr. Corbett | until she felt really strong enough to battle against the sorrowful tale of woe with which Sir John should shortly make her cognisant @ [23]
+
+BATCH 5 PARSE STATS: {'parsed': 3, 'ignored': 0, 'quarantined': 0, 'no_span': 0, 'span_needed': 3, 'span_valid': 3, 'span_validity': 1.0, 'junk_ratio': 0.0, 'content_count': 3, 'repaired_prefix': 0, 'disallowed': 0, 'shape_invalid': 0, 'end_tail_miss': 0}
+
+======================================================================================================================
+--- MERGED BEFORE SANITIZER ---
+======================================================================================================================
+SAY: Irene | hasty and numerous were the preparations for desolation and departure @ [6]
+SAY: Sir John and husband | "Tell me, I implore of you, why the once blithe and cheerful spot of peace is now apparently a dismal dungeon on the night of our home-coming, when all should have been a mass of dazzling glow and splendour?" @ [15]
+SAY: she who proffered such ecstacy | "Can it be that she who proffered such ecstacy for months before, on the eve of our return, is now no more? or can it be possible that we have crossed each other on the wide waters of tossing triumph or wanton woe?" @ [16]
+SAY: Speak at once, for pity's sake! | "Speak at once, for pity's sake! and do not hide from me the answer of truth and honest knowledge?" @ [17]
+SAY: Oh, merciful heavens! | "Oh, merciful heavens!" @ [17]
+SAY: Lady Dunfern | "Speak at once, for pity’s sake! and do not hide from me the answer of truth and honest knowledge? Oh, merciful heavens!" @ [17]
+SAY: Sir John | "Tom, kindly wait for a few minutes, as her ladyship has been frightfully overcome only a short time ago by the blank appearance in and around Dilworth Castle. She fears something dreadful must surely have happened Lady Dilworth in her absence, since she has failed to make the occasion of our home-coming a merry torchlight of rejoicing." @ [19]
+SAY: Sir John | “Tom, kindly wait for a few minutes, as her ladyship has been frightfully overcome only a short time ago by the blank appearance in and around Dilworth Castle. She fears something dreadful must surely have happened Lady Dilworth in her absence, since she has failed to make the occasion of our home-coming a merry torchlight of rejoicing.” @ [19]
+SAY: Tom | “Tom, who had been in Sir John's service for the past twenty years, was about to testify to the truth of his remarks” @ [19]
+SAY: Sir John | “Sir John saw that delay was dangerous, and helping to remove his darling Irene from the seat on which she unconsciously reclined” @ [20]
+SAY: Sir John | “succeeded in placing her on a low couch in the very room he so often silently prayed for her presence” @ [20]
+SAY: Sir John | “Bathing her highly-heated temples with a sprinkling of cooling liquid concealed in his flask” @ [20]
+SAY: Sir John | “lost no time in summoning the village doctor” @ [20]
+SAY: Village doctor | “Lady Dunfern to have slightly recovered, and giving the necessary orders left the room” @ [20]
+SAY: Lady Dunfern | Many, many were the questions asked by Lady Dunfern relative to Lady Dilworth @ [23]
+SAY: Dr. Corbett | strange, yet true, that no one could possibly have humoured her in such a manner to warrant recovery @ [23]
+SAY: Dr. Corbett | until she felt really strong enough to battle against the sorrowful tale of woe with which Sir John should shortly make her cognisant @ [23]
+
+MERGED STATS: {'parsed': 17, 'ignored': 0, 'quarantined': 0, 'no_span': 0, 'span_needed': 17, 'span_valid': 17, 'span_validity': 1.0, 'junk_ratio': 0.0, 'content_count': 17, 'repaired_prefix': 0, 'disallowed': 0, 'shape_invalid': 0, 'end_tail_miss': 0}
+TOTAL PROVENANCE COMPLETED: 3
+BOUNDARY SPEAKER: None
+
+======================================================================================================================
+--- AFTER CURRENT SAY SANITIZER ---
+======================================================================================================================
+SAY: Lady Dunfern | Tell me, I implore of you, Sir John and husband, why the once blithe and cheerful spot of peace is now apparently a dismal dungeon on the night of our home-coming, when all should have been a mass of dazzling glow and splendour? @ [15]
+SAY: Lady Dunfern | "Can it be that she who proffered such ecstacy for months before, on the eve of our return, is now no more? or can it be possible that we have crossed each other on the wide waters of tossing triumph or wanton woe?" @ [16]
+SAY: Lady Dunfern | Speak at once, for pity's sake! and do not hide from me the answer of truth and honest knowledge? Oh, merciful heavens! @ [17]
+SAY: Sir John | Tom, @ [19]
+SAY: Sir John | kindly wait for a few minutes, as her ladyship has been frightfully overcome only a short time ago by the blank appearance in and around Dilworth Castle. She fears something dreadful must surely have happened Lady Dilworth in her absence, since she has failed to make the occasion of our home-coming a merry torchlight of rejoicing. @ [19]
+
+FINAL SANITIZER STATS: {'parsed': 5, 'ignored': 0, 'quarantined': 0, 'no_span': 0, 'span_needed': 17, 'span_valid': 17, 'span_validity': 1.0, 'junk_ratio': 0.0, 'content_count': 5, 'repaired_prefix': 0, 'disallowed': 0, 'shape_invalid': 0, 'end_tail_miss': 0, 'say_provenance_relocated': 0, 'say_source_surface_snapped': 4, 'say_source_surface_snapped_fragments': 6, 'say_mixed_surface_salvaged': 0, 'say_mixed_surface_salvaged_fragments': 0, 'say_speaker_rewritten': 4, 'say_boundary_speaker_rewritten': 0, 'say_boundary_direct_supported': 0, 'say_conflict_dropped': 0, 'say_conflict_resolved': 0, 'say_document_dropped': 0, 'say_unsupported_dropped': 10, 'say_speaker_surface_dropped': 0, 'say_mixed_surface_dropped': 0, 'say_duplicate_dropped': 2, 'say_containment_duplicate_dropped': 2, 'say_direct_supported': 9, 'say_indirect_supported': 0, 'say_source_supported': 9, 'say_provenance_completed': 3}
+TOTAL SAY ELAPSED: 11.45s
+
+======================================================================================================================
+SEG 9 chapter=8 tokens=474
+======================================================================================================================
+
+SOURCE ROW COUNT: 6
+TARGET COUNT: 3
+BATCH COUNT: 2
+BATCH TARGETS: [[1, 2], [4]]
+
+--- ALL TARGETS ---
+
+[P01] quotes=1
+"You speak of your snowy tufts appearing where once there dwelt locks of glossy jet. Well, I am convinced they never originated through me, and must surely have been threatening to appear before taking the step which links me with their origin.
+
+[P02] quotes=2
+"I now wish to retire, feeling greatly fatigued, and trusting our relations shall remain friendly and mutual, I bid thee good-night."
+
+[P04] quotes=4
+She had surely been awaked from her reverie by Sir John, and felt sharply the sting of his remarks, which were truly applied, indeed. She now resolved to let matters move along as quietly as possible until after she should pass the most critical period of her existence. She was prepared to manifest her innocence throughout, without detection if possible. But amongst the household there moved a matron under whose hawk-like eye Lady Dunfern was almost inclined to shrink. She felt when in her presence to be facing an enemy of unbounded experience. She abhorred her stealing tread, but not without cause. It was to this dame she so often issued orders that never were carried out; and when intimating to Sir John the necessity of instantly dismissing such a tyrant, he quietly "rebelled," adding "that she had been almost twenty years in his service, and presently could not think of parting with s ...[clip]
+
+######################################################################################################################
+BATCH 1/2 targets=[1, 2]
+######################################################################################################################
+
+--- BATCH 1 USER MESSAGE ---
+Extract ONLY speech actually spoken aloud from these paragraphs.
+
+[P01] "You speak of your snowy tufts appearing where once there dwelt locks of glossy jet. Well, I am convinced they never originated through me, and must surely have been threatening to appear before taking the step which links me with their origin.
+
+[P02] "I now wish to retire, feeling greatly fatigued, and trusting our relations shall remain friendly and mutual, I bid thee good-night."
+
+--- BATCH 1 RAW ---
+SAY: Silas | “You speak of your snowy tufts appearing where once there dwelt locks of glossy jet.” @P01
+SAY: Silas | “Well, I am convinced they never originated through me, and must surely have been threatening to appear before taking the step which links me with their origin.” @P01
+SAY: Silas | “I now wish to retire, feeling greatly fatigued, and trusting our relations shall remain friendly and mutual, I bid thee good-night.” @P02
+elapsed: 1.52s
+
+BATCH 1 PROVENANCE COMPLETED: 0
+
+--- BATCH 1 PARSED ---
+SAY: Silas | “You speak of your snowy tufts appearing where once there dwelt locks of glossy jet.” @ [1]
+SAY: Silas | “Well, I am convinced they never originated through me, and must surely have been threatening to appear before taking the step which links me with their origin.” @ [1]
+SAY: Silas | “I now wish to retire, feeling greatly fatigued, and trusting our relations shall remain friendly and mutual, I bid thee good-night.” @ [2]
+
+BATCH 1 PARSE STATS: {'parsed': 3, 'ignored': 0, 'quarantined': 0, 'no_span': 0, 'span_needed': 3, 'span_valid': 3, 'span_validity': 1.0, 'junk_ratio': 0.0, 'content_count': 3, 'repaired_prefix': 0, 'disallowed': 0, 'shape_invalid': 0, 'end_tail_miss': 0}
+
+######################################################################################################################
+BATCH 2/2 targets=[4]
+######################################################################################################################
+
+--- BATCH 2 USER MESSAGE ---
+Extract ONLY speech actually spoken aloud from these paragraphs.
+
+[P04] She had surely been awaked from her reverie by Sir John, and felt sharply the sting of his remarks, which were truly applied, indeed. She now resolved to let matters move along as quietly as possible until after she should pass the most critical period of her existence. She was prepared to manifest her innocence throughout, without detection if possible. But amongst the household there moved a matron under whose hawk-like eye Lady Dunfern was almost inclined to shrink. She felt when in her presence to be facing an enemy of unbounded experience. She abhorred her stealing tread, but not without cause. It was to this dame she so often issued orders that never were carried out; and when intimating to Sir John the necessity of instantly dismissing such a tyrant, he quietly "rebelled," adding "that she had been almost twenty years in his service, and presently could not think of parting with such a valued and much-trusted friend."
+
+--- BATCH 2 RAW ---
+SAY: Sir John | “which were truly applied, indeed” @P04
+SAY: Lady Dunfern | “It was to this dame she so often issued orders that never were carried out” @P04
+SAY: Sir John | “that she had been almost twenty years in his service, and presently could not think of parting with such a valued and much-trusted friend.” @P04
+elapsed: 1.31s
+
+BATCH 2 PROVENANCE COMPLETED: 0
+
+--- BATCH 2 PARSED ---
+SAY: Sir John | “which were truly applied, indeed” @ [4]
+SAY: Lady Dunfern | “It was to this dame she so often issued orders that never were carried out” @ [4]
+SAY: Sir John | “that she had been almost twenty years in his service, and presently could not think of parting with such a valued and much-trusted friend.” @ [4]
+
+BATCH 2 PARSE STATS: {'parsed': 3, 'ignored': 0, 'quarantined': 0, 'no_span': 0, 'span_needed': 3, 'span_valid': 3, 'span_validity': 1.0, 'junk_ratio': 0.0, 'content_count': 3, 'repaired_prefix': 0, 'disallowed': 0, 'shape_invalid': 0, 'end_tail_miss': 0}
+
+======================================================================================================================
+--- MERGED BEFORE SANITIZER ---
+======================================================================================================================
+SAY: Silas | “You speak of your snowy tufts appearing where once there dwelt locks of glossy jet.” @ [1]
+SAY: Silas | “Well, I am convinced they never originated through me, and must surely have been threatening to appear before taking the step which links me with their origin.” @ [1]
+SAY: Silas | “I now wish to retire, feeling greatly fatigued, and trusting our relations shall remain friendly and mutual, I bid thee good-night.” @ [2]
+SAY: Sir John | “which were truly applied, indeed” @ [4]
+SAY: Lady Dunfern | “It was to this dame she so often issued orders that never were carried out” @ [4]
+SAY: Sir John | “that she had been almost twenty years in his service, and presently could not think of parting with such a valued and much-trusted friend.” @ [4]
+
+MERGED STATS: {'parsed': 6, 'ignored': 0, 'quarantined': 0, 'no_span': 0, 'span_needed': 6, 'span_valid': 6, 'span_validity': 1.0, 'junk_ratio': 0.0, 'content_count': 6, 'repaired_prefix': 0, 'disallowed': 0, 'shape_invalid': 0, 'end_tail_miss': 0}
+TOTAL PROVENANCE COMPLETED: 0
+BOUNDARY SPEAKER: 'Lady Dunfern'
+
+======================================================================================================================
+--- AFTER CURRENT SAY SANITIZER ---
+======================================================================================================================
+SAY: Lady Dunfern | “You speak of your snowy tufts appearing where once there dwelt locks of glossy jet.” @ [1]
+SAY: Lady Dunfern | “Well, I am convinced they never originated through me, and must surely have been threatening to appear before taking the step which links me with their origin.” @ [1]
+SAY: Lady Dunfern | “I now wish to retire, feeling greatly fatigued, and trusting our relations shall remain friendly and mutual, I bid thee good-night.” @ [2]
+
+FINAL SANITIZER STATS: {'parsed': 3, 'ignored': 0, 'quarantined': 0, 'no_span': 0, 'span_needed': 6, 'span_valid': 6, 'span_validity': 1.0, 'junk_ratio': 0.0, 'content_count': 3, 'repaired_prefix': 0, 'disallowed': 0, 'shape_invalid': 0, 'end_tail_miss': 0, 'say_provenance_relocated': 0, 'say_source_surface_snapped': 0, 'say_source_surface_snapped_fragments': 0, 'say_mixed_surface_salvaged': 0, 'say_mixed_surface_salvaged_fragments': 0, 'say_speaker_rewritten': 0, 'say_boundary_speaker_rewritten': 3, 'say_boundary_direct_supported': 3, 'say_conflict_dropped': 0, 'say_conflict_resolved': 0, 'say_document_dropped': 0, 'say_unsupported_dropped': 3, 'say_speaker_surface_dropped': 0, 'say_mixed_surface_dropped': 0, 'say_duplicate_dropped': 0, 'say_containment_duplicate_dropped': 0, 'say_direct_supported': 3, 'say_indirect_supported': 0, 'say_source_supported': 3, 'say_provenance_completed': 0}
+TOTAL SAY ELAPSED: 2.83s

@@ -388,7 +388,6 @@ def safety_assertions(
             "Silas",
             "Irene",
             "Duchess of Nante",
-            "Lady Dunfern",
             "Earl Peden",
             "Lady Dilworth",
             "I",
@@ -435,6 +434,51 @@ def safety_assertions(
                         record
                     )
                     == "Sir John"
+                ), record
+
+
+        # i2 source-authoritative discovery:
+        # the frozen weak-model proposals across P26-P30 must
+        # canonicalize to Lady Dunfern.
+        lady_expected = set(
+            range(
+                26,
+                31,
+            )
+        )
+
+        lady_seen = {
+            span
+            for record in say_records
+            if (
+                speaker_of(
+                    record
+                )
+                == "Lady Dunfern"
+            )
+            for span in record.spans
+            if span in lady_expected
+        }
+
+        assert (
+            lady_seen
+            == lady_expected
+        ), (
+            "SEG8 missing recovered "
+            "Lady Dunfern run spans: "
+            f"{sorted(lady_expected - lady_seen)}"
+        )
+
+        for record in say_records:
+            if any(
+                26 <= span <= 30
+                for span in record.spans
+            ):
+                assert (
+                    speaker_of(
+                        record
+                    )
+                    == "Lady Dunfern"
                 ), record
 
     elif idx == 11:

@@ -1,0 +1,117 @@
+ingesting: /home/romankozak/studio/public/it/ai-reading-assistant/experimental/pg34181.txt
+title: Final SAY freeze rc1.2 k2b
+book_id: 366
+
+selected chapters: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+selected segments: {'total': 12, 'pending': 12, 'done': 0, 'statuses': {'pending': 12}}
+
+------------------------------------------------------------------------------------------
+segment 1 | chapter 1 | tokens 661
+profile: FAST+COVERAGE+SAY
+contract: True
+elapsed: 67.82s
+progress: 1/12 {'done': 1, 'pending': 11}
+
+------------------------------------------------------------------------------------------
+segment 2 | chapter 2 | tokens 1511
+profile: FAST+COVERAGE+GAP+SAY+DOC
+contract: True
+elapsed: 35.86s
+progress: 2/12 {'done': 2, 'pending': 10}
+
+------------------------------------------------------------------------------------------
+segment 3 | chapter 3 | tokens 1077
+profile: FAST+COVERAGE+GAP+SAY
+contract: True
+elapsed: 27.41s
+progress: 3/12 {'done': 3, 'pending': 9}
+
+------------------------------------------------------------------------------------------
+segment 4 | chapter 4 | tokens 1388
+profile: FAST+REPAIR+COVERAGE+GAP+SAY
+contract: True
+elapsed: 33.77s
+progress: 4/12 {'done': 4, 'pending': 8}
+
+------------------------------------------------------------------------------------------
+segment 5 | chapter 5 | tokens 1777
+profile: FAST+COVERAGE+GAP+SAY+DOC
+contract: True
+elapsed: 79.10s
+progress: 5/12 {'done': 5, 'pending': 7}
+
+------------------------------------------------------------------------------------------
+segment 6 | chapter 6 | tokens 2012
+profile: FAST+COVERAGE+GAP+SAY
+contract: True
+elapsed: 64.27s
+progress: 6/12 {'done': 6, 'pending': 6}
+
+------------------------------------------------------------------------------------------
+segment 7 | chapter 7 | tokens 2332
+profile: ROBUST-A
+contract: False
+elapsed: 29.32s
+progress: 7/12 {'done': 6, 'needs_review': 1, 'pending': 5}
+
+------------------------------------------------------------------------------------------
+segment 8 | chapter 8 | tokens 2463
+profile: FAST+COVERAGE+GAP+SAY
+contract: True
+elapsed: 118.73s
+progress: 8/12 {'done': 7, 'needs_review': 1, 'pending': 4}
+
+------------------------------------------------------------------------------------------
+segment 9 | chapter 8 | tokens 474
+profile: FAST+COVERAGE+SAY
+contract: True
+elapsed: 27.06s
+progress: 9/12 {'done': 8, 'needs_review': 1, 'pending': 3}
+
+------------------------------------------------------------------------------------------
+segment 10 | chapter 9 | tokens 1500
+profile: FAST+COVERAGE+GAP+SAY+DOC
+contract: True
+elapsed: 44.54s
+progress: 10/12 {'done': 9, 'needs_review': 1, 'pending': 2}
+
+------------------------------------------------------------------------------------------
+segment 11 | chapter 10 | tokens 2492
+profile: FAST+COVERAGE+GAP+SAY+DOC
+contract: True
+elapsed: 66.62s
+progress: 11/12 {'done': 10, 'needs_review': 1, 'pending': 1}
+
+------------------------------------------------------------------------------------------
+segment 12 | chapter 10 | tokens 430
+profile: FAST+COVERAGE+GAP+SAY
+contract: True
+elapsed: 84.21s
+progress: 12/12 {'done': 11, 'needs_review': 1}
+
+Reached first chapter outside the selected real-book window: 11
+
+segments analyzed this run: 12
+
+==========================================================================================
+REAL BOOK REPORT
+==========================================================================================
+chapters: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+segments: 12
+segment statuses: {'done': 11, 'needs_review': 1}
+source tokens: 18117
+
+observations:
+  DET     35
+  EV     272
+  KN       1
+  Q        8
+  REL      2
+  SAY     53
+  ST      13
+  TH+      2
+
+summaries: 11
+transitions: 11
+
+BOOK_ID=366
