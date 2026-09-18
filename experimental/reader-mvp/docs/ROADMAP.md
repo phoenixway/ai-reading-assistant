@@ -45,7 +45,7 @@ Known green state:
 - 34 ambiguity canaries;
 - frozen SEG8/SEG11 replay PASS.
 
-## ACTIVE - j1 mixed-surface SAY salvage
+## DONE - j1 mixed-surface SAY salvage
 
 Goal:
 
@@ -61,13 +61,122 @@ Acceptance:
 - SEG11 precision does not regress;
 - all existing canaries remain green.
 
-## NEXT - Final SAY audit
+## FROZEN - Specialized SAY
 
-After j1:
-- real-book audit across first ten chapters;
-- classify remaining misses;
-- fix only general failures;
-- freeze specialized SAY work.
+Specialized SAY extraction is frozen for rc1.2.
+
+Completed:
+- j1: mixed spoken/narrator quote-surface salvage;
+- k1: SOURCE-authoritative quote-surface canonicalization;
+- k2a: intra-segment post-run speaker continuity;
+- k2b: cross-segment open-quote-run speaker continuity.
+
+Validation:
+- focused SAY regression suite: PASS;
+- full offline suite: 324 PASS;
+- compileall: PASS;
+- frozen SEG8/SEG11 replay: PASS;
+- fresh real-book canonical audit on book366: PASS;
+- SEG9 canonical continuation: exactly 3 Lady Dunfern SAY records at P01/P01/P02;
+- SEG9 P04 false-SAY leakage: none.
+
+Precision rule:
+- model proposes;
+- immutable SOURCE proves;
+- deterministic sanitizer decides canonical acceptance.
+
+Do not extend SAY with additional heuristics unless a concrete
+regression fixture demonstrates a general failure.
+
+## FROZEN - BASE-G1 + BASE-C1 grounding firewall
+
+The proven BASE firewall has two deliberately separate layers.
+
+### G1 - canonical lexical grounding
+
+G1a:
+- removed concrete synthetic ACTION examples from the extraction prompt;
+- added narrow SOURCE role support where positive lexical proof is available;
+- kept persistence dumb: grounding happens before canonical commit.
+
+G1b:
+- rejects malformed pipe-shaped EV payloads at the final canonical boundary;
+- rejects EV whose exact lexical surface occurs only inside direct-quote SOURCE;
+- uses immutable SOURCE geometry;
+- does not use broad semantic inference as a global grounding oracle.
+
+Validation:
+- book368: 12/12 selected segments done;
+- known synthetic/example contamination: zero surviving canonical EV;
+- known quote-surface garbage EV: zero survivors;
+- pipe-shaped EV survivors: zero;
+- G1b production quarantine: 16 deterministic drops.
+
+### C1 - quote-only provenance topology
+
+C1 covers semantic speech leakage that G1b cannot catch when a weak model
+paraphrases direct speech into an EV.
+
+Rule:
+
+    provenance entirely inside direct speech
+        -> cannot by itself establish canonical world EV
+
+The decision uses SOURCE topology rather than semantic interpretation.
+Mixed narration + speech paragraphs deliberately abstain.
+
+Validation:
+- authoritative offline suite: 355/355 PASS;
+- compileall: PASS;
+- git diff --check: PASS;
+- book369: 12/12 selected segments done;
+- one initial SEG9 needs_review was retried from an empty canonical ledger
+  and passed on the next stochastic local-model run;
+- C1 production quarantine: 19 EV drops;
+- zero surviving EV for the known semantic-speech leaks:
+  - I have given orders;
+  - I was never thwarted in any way from acting;
+  - Sir John confronts Irene about her changed behavior;
+  - Irene Iddesleigh requests Sir John to have a seat opposite her;
+- pipe-shaped EV survivors: zero;
+- SAY is unchanged between book368 and book369: 58 total in both, with
+  identical per-segment counts;
+- EV totals are 245 -> 244; ordinary EV differential is not treated as
+  deterministic evidence because the local model is stochastic.
+
+Canonical flow:
+
+    LLM proposal
+        -> protocol / shape validation
+        -> G1 lexical/canonical firewall
+        -> C1 provenance-topology firewall
+        -> canonical ledger OR quarantine/drop
+
+The grounding decision uses immutable SOURCE and does not use previously
+generated canonical observations as proof.
+
+Scope limit:
+- this does not prove that every possible unsupported BASE/world observation
+  is solved;
+- G1 covers its proven lexical/canonical failure classes;
+- C1 covers quote-only provenance leakage;
+- broader epistemic/context leakage remains a separate extraction-contract
+  reliability problem.
+
+Freeze rule:
+- do not extend G1 or C1 without a concrete regression fixture demonstrating
+  a general failure.
+
+## NEXT - BASE extraction-contract reliability audit
+
+Audit remaining cases where a model proposal acquires stronger canonical
+world semantics than its SOURCE evidence permits.
+
+Discover candidate failure classes from measured production failures rather
+than inventing additional heuristics in advance.
+
+After this reliability gate, continue toward the pure-Python rc1.2 semantic
+microkernel.
 
 ---
 
@@ -530,12 +639,13 @@ It must solve a measured failure at acceptable cost.
 
 # Current Next Action
 
-```text
-j1 mixed-surface SAY salvage
-```
+    BASE extraction-contract reliability audit
 
-After j1 and final SAY freeze:
+G1 and C1 are frozen.
 
-```text
-build pure-Python rc1.2 semantic microkernel
-```
+Investigate measured epistemic/context leakage classes outside quote-only
+provenance without expanding the frozen firewalls by default.
+
+After the BASE reliability gate:
+
+    build pure-Python rc1.2 semantic microkernel

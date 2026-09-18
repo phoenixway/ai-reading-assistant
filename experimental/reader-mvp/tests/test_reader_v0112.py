@@ -175,14 +175,29 @@ def test_action_coverage_requires_self_contained_events():
         in ACTION_COVERAGE_SYSTEM
     )
     assert (
-        "Keva checked the service door handle"
+        "Never truncate an EV after the predicate"
         in ACTION_COVERAGE_SYSTEM
+    )
+    assert (
+        "Preserve every explicit semantic role"
+        in ACTION_COVERAGE_SYSTEM
+    )
+    assert (
+        "Never introduce names, times, objects, destinations"
+        in ACTION_COVERAGE_SYSTEM
+    )
+
+    # Extraction instructions must describe structure, not reusable
+    # fictional world facts that a weak model can replay as output.
+    assert (
+        "Keva checked the service door handle"
+        not in ACTION_COVERAGE_SYSTEM
     )
     assert (
         "Mira copied 02:10 into her notebook"
-        in ACTION_COVERAGE_SYSTEM
+        not in ACTION_COVERAGE_SYSTEM
     )
     assert (
         "Mira placed the folded report under the radio"
-        in ACTION_COVERAGE_SYSTEM
+        not in ACTION_COVERAGE_SYSTEM
     )

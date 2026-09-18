@@ -321,9 +321,9 @@ RULES
 - For movement or placement actions, preserve any explicit destination, container, source, direction, or spatial complement.
 - For read/write/copy actions, preserve the explicit item/content being handled and any explicit destination or container.
 - Include an explicit recipient, destination, container, or location when it distinguishes the action.
-- Never reduce `Keva checked the service door handle` to `Keva checked`.
-- Never reduce `Mira copied 02:10 into her notebook` to `Mira copied 02:10`.
-- Never reduce `Mira placed the folded report under the radio` to `Mira placed a report`.
+- Never truncate an EV after the predicate when SOURCE supplies an explicit object, destination, container, recipient, or complement.
+- Preserve every explicit semantic role needed to distinguish the action from a weaker or different action.
+- Never introduce names, times, objects, destinations, or other world facts that are not supported by the supplied SOURCE.
 - Preserve grammatical roles exactly. Never swap actor, recipient, giver, receiver, possessor, or object.
 - If the text says A hands B an object, A must remain the actor and B the receiver.
 - Use the explicit character name instead of a pronoun when the referent is unambiguous in the supplied paragraph.
@@ -2615,8 +2615,14 @@ def _gap_coordinated_subject_supported(
         }:
             continue
 
+        # Only a new ACTOR pronoun breaks subject continuity.
+        # Object `it` inside:
+        #
+        #   He snatched it, wrapped it, and tossed it ...
+        #
+        # does not introduce a competing grammatical subject.
         if any(
-            word in _GAP_PERSON_PRONOUNS
+            word in _GAP_COORDINATED_PRONOUNS
             for word in between[:-1]
         ):
             continue
@@ -3220,6 +3226,7 @@ def _sanitize_action_coverage(
     positive_subject_bridged = 0
     positive_object_bridged = 0
     coordinated_tail_extended = 0
+    source_role_unsupported_dropped = 0
 
     for record in parsed.records:
         if record.tag != 'EV':
@@ -3228,12 +3235,19 @@ def _sanitize_action_coverage(
 
         payload = record.payload.strip()
 
+        source = ' '.join(
+            source_by_local_no.get(span_no, '')
+            for span_no in record.spans
+        )
+
         # Precision-first de-canonicalization:
         # if the model replaced a literal source pronoun with a
         # named actor, restore only the source-surface subject.
         #
         # Restrict to one paragraph. Multi-span records are not
         # safe for this literal alignment repair.
+        grounding_payload = None
+
         if (
             record.tag == 'EV'
             and len(record.spans) == 1
@@ -3256,6 +3270,15 @@ def _sanitize_action_coverage(
             if subject_changed:
                 payload = repaired_payload
                 surface_subject_repaired += 1
+
+            # Preserve the literal SOURCE-facing action surface
+            # separately from later evidence-backed canonicalization.
+            #
+            # BASE-G1 proves this representation against immutable
+            # SOURCE. The canonical payload may subsequently gain a
+            # resolved subject/object/destination through independent
+            # positive-evidence bridges.
+            grounding_payload = payload
 
             (
                 bridged_payload,
@@ -3297,11 +3320,6 @@ def _sanitize_action_coverage(
         if _COVERAGE_SPEECH_ACT_RE.search(payload):
             speech_ev_dropped += 1
             continue
-
-        source = ' '.join(
-            source_by_local_no.get(span_no, '')
-            for span_no in record.spans
-        )
 
         # Source-aware communication firewall. This catches
         # reported/indirect speech which ACTION-COVERAGE emitted
@@ -3385,6 +3403,45 @@ def _sanitize_action_coverage(
                 payload = trimmed
                 hedge_trimmed += 1
 
+        # BASE-G1 canonical grounding firewall.
+        #
+        # Run LAST among ACTION semantic guards so established
+        # specialized decisions retain ownership of their cases and
+        # diagnostics:
+        #
+        #   role conflict
+        #   speech/reported speech
+        #   hedged actuality
+        #   positive subject/object resolution
+        #   complement completion
+        #
+        # Proof is evaluated against the SOURCE-facing representation,
+        # not against later canonical identity resolution.
+        #
+        # Narrow rc1.2 scope: only the single-token actor form already
+        # owned by _action_subject_tail(). Unsupported shapes abstain
+        # rather than becoming new false-negative territory.
+        if grounding_payload is not None:
+            surface_action = _action_subject_tail(
+                grounding_payload,
+            )
+
+            if surface_action is not None:
+                surface_subject, _surface_tail = (
+                    surface_action
+                )
+
+                if (
+                    surface_subject
+                    not in _ACTION_SURFACE_ARTICLES
+                    and not _gap_source_role_supported(
+                        grounding_payload,
+                        source,
+                    )
+                ):
+                    source_role_unsupported_dropped += 1
+                    continue
+
         records.append(
             Record(
                 tag=record.tag,
@@ -3408,6 +3465,9 @@ def _sanitize_action_coverage(
     stats['positive_subject_bridged'] = positive_subject_bridged
     stats['positive_object_bridged'] = positive_object_bridged
     stats['coordinated_tail_extended'] = coordinated_tail_extended
+    stats['source_role_unsupported_dropped'] = (
+        source_role_unsupported_dropped
+    )
 
     return Parsed(
         records=records,
@@ -9139,6 +9199,489 @@ def _repaired_contract_pass(
     )
 
 
+
+def _base_g1_surface_token_spans(
+    text: str,
+):
+    """
+    Return normalized lexical tokens plus exact character spans.
+
+    Apostrophe normalization is length-preserving so returned
+    positions remain valid against the original SOURCE string.
+    """
+
+    normalized = (
+        (text or '')
+        .replace('’', "'")
+        .replace('‘', "'")
+    )
+
+    return [
+        (
+            match.group(0).casefold(),
+            match.start(),
+            match.end(),
+        )
+        for match in re.finditer(
+            r"[A-Za-z0-9]+(?:'[A-Za-z0-9]+)?",
+            normalized,
+        )
+    ]
+
+
+def _base_g1_exact_surface_occurrences(
+    payload: str,
+    source: str,
+) -> list[tuple[int, int]]:
+    """
+    Locate exact normalized token-sequence occurrences of one EV
+    inside one immutable SOURCE paragraph.
+
+    No fuzzy matching and no semantic expansion.
+    """
+
+    wanted = [
+        token
+        for token, _start, _end
+        in _base_g1_surface_token_spans(
+            payload
+        )
+    ]
+
+    if not wanted:
+        return []
+
+    available = (
+        _base_g1_surface_token_spans(
+            source
+        )
+    )
+
+    if len(available) < len(wanted):
+        return []
+
+    result = []
+    width = len(wanted)
+
+    for i in range(
+        0,
+        len(available) - width + 1,
+    ):
+        actual = [
+            token
+            for token, _start, _end
+            in available[i:i + width]
+        ]
+
+        if actual != wanted:
+            continue
+
+        result.append(
+            (
+                available[i][1],
+                available[i + width - 1][2],
+            )
+        )
+
+    return result
+
+
+def _base_g1_ev_is_quote_only(
+    record: Record,
+    source_by_local_no: dict[int, str],
+) -> bool:
+    """
+    True only when the complete EV lexical surface has at least one
+    exact occurrence in its declared SOURCE paragraph and EVERY such
+    occurrence lies wholly inside direct-quote geometry.
+
+    This is a deterministic ownership rule, not speech-act NLP.
+
+        SOURCE:
+            "Speak, I implore you," said John.
+
+        EV:
+            Speak, I implore you
+                -> quote-only -> DROP
+
+    Ambiguity abstains:
+
+        John said "waited outside".
+        John waited outside.
+
+        EV:
+            John waited outside
+                -> a narrative occurrence exists -> KEEP
+
+    Multi-span EV is outside this narrow rc1.2 proof surface.
+    """
+
+    if (
+        record.tag != 'EV'
+        or len(record.spans) != 1
+    ):
+        return False
+
+    local_no = int(
+        record.spans[0]
+    )
+
+    source = (
+        source_by_local_no.get(
+            local_no,
+            '',
+        )
+        or ''
+    )
+
+    if not source:
+        return False
+
+    occurrences = (
+        _base_g1_exact_surface_occurrences(
+            record.payload,
+            source,
+        )
+    )
+
+    if not occurrences:
+        return False
+
+    quoted = (
+        _say_source_quote_intervals(
+            source
+        )
+    )
+
+    if not quoted:
+        return False
+
+    def inside_quote(
+        occurrence,
+    ):
+        start, end = occurrence
+
+        return any(
+            quote_start <= start
+            and end <= quote_end
+            for quote_start, quote_end
+            in quoted
+        )
+
+    ownership = [
+        inside_quote(occurrence)
+        for occurrence in occurrences
+    ]
+
+    return (
+        bool(ownership)
+        and all(ownership)
+    )
+
+
+def _sanitize_base_grounding(
+    parsed: Parsed,
+    source_by_local_no: dict[int, str],
+) -> Parsed:
+    """
+    BASE-G1b canonical-boundary firewall.
+
+    This receives the FINAL merged Parsed object, after FAST,
+    targeted repair, ROBUST-A, ACTION coverage/GAP, SAY replacement,
+    and DOCUMENT coverage.
+
+    Deterministic DROP rules only:
+
+    1. EV payload contains `|`
+       -> invalid EV shape; structured payload leaked into EV.
+
+    2. Complete EV lexical surface exists in declared SOURCE only
+       inside direct-quote geometry
+       -> spoken/document quoted content does not become a world EV.
+
+    Everything else ABSTAINS and survives.
+
+    In particular this function deliberately does NOT use
+    _gap_source_role_supported() as a universal oracle.
+    """
+
+    records = []
+    quarantined = list(
+        parsed.quarantined
+    )
+
+    malformed_ev_dropped = 0
+    quote_only_ev_dropped = 0
+
+    for record in parsed.records:
+        if record.tag != 'EV':
+            records.append(record)
+            continue
+
+        payload = (
+            record.payload
+            or ''
+        ).strip()
+
+        if '|' in payload:
+            malformed_ev_dropped += 1
+
+            quarantined.append(
+                (
+                    record.raw
+                    or f"EV: {payload}",
+                    (
+                        "BASE-G1 malformed EV payload: "
+                        "structured pipe field"
+                    ),
+                )
+            )
+            continue
+
+        if _base_g1_ev_is_quote_only(
+            record,
+            source_by_local_no,
+        ):
+            quote_only_ev_dropped += 1
+
+            quarantined.append(
+                (
+                    record.raw
+                    or f"EV: {payload}",
+                    (
+                        "BASE-G1 EV belongs only to "
+                        "direct-quote SOURCE surface"
+                    ),
+                )
+            )
+            continue
+
+        records.append(record)
+
+    stats = dict(
+        parsed.stats
+    )
+
+    stats['parsed'] = len(records)
+    stats['content_count'] = len(
+        [
+            record
+            for record in records
+            if record.tag
+            not in {
+                'SUM',
+                'WHO',
+                'LOC',
+                'TIME',
+                'END',
+            }
+        ]
+    )
+
+    stats['quarantined'] = len(
+        quarantined
+    )
+
+    stats[
+        'base_g1_malformed_ev_dropped'
+    ] = malformed_ev_dropped
+
+    stats[
+        'base_g1_quote_only_ev_dropped'
+    ] = quote_only_ev_dropped
+
+    return Parsed(
+        records=records,
+        ignored=list(parsed.ignored),
+        quarantined=quarantined,
+        stats=stats,
+        contract_pass=parsed.contract_pass,
+    )
+
+
+
+def _base_source_is_quote_only(
+    source: str,
+) -> bool:
+    """
+    True when every meaningful lexical token in one SOURCE paragraph
+    belongs to direct-quote geometry.
+
+    This is paragraph topology, not semantic classification.
+
+    Supported:
+
+        "I, more than once, have given orders ...
+
+        -> all lexical SOURCE is spoken content
+
+    Not quote-only:
+
+        "Go now," said Sir John. He crossed the room.
+
+        -> narrator/source tokens exist outside the quotation
+
+    Old-style open quotation paragraphs are supported by the existing
+    SAY quote geometry helper.
+    """
+
+    source = (
+        source
+        or ''
+    )
+
+    tokens = (
+        _base_g1_surface_token_spans(
+            source
+        )
+    )
+
+    if not tokens:
+        return False
+
+    intervals = (
+        _say_source_quote_intervals(
+            source
+        )
+    )
+
+    if not intervals:
+        return False
+
+    for _token, start, end in tokens:
+        if not any(
+            quote_start <= start
+            and end <= quote_end
+            for quote_start, quote_end
+            in intervals
+        ):
+            return False
+
+    return True
+
+
+def _sanitize_base_extraction_contract(
+    parsed: Parsed,
+    source_by_local_no: dict[int, str],
+) -> Parsed:
+    """
+    BASE extraction-contract firewall C1.
+
+    G1 already owns:
+        - synthetic prompt leakage on its proven surface
+        - malformed pipe-shaped EV
+        - exact quote-surface EV leakage
+
+    C1 owns a different invariant:
+
+        quoted assertions != canonical world events
+
+    If EVERY declared provenance paragraph for an EV consists entirely
+    of direct-speech SOURCE, the cited evidence cannot establish that
+    EV as narrator/world actuality.
+
+    This also catches weak-model paraphrases where exact lexical
+    grounding cannot:
+
+        SOURCE:
+            "I, more than once, have given orders ..."
+
+        MODEL:
+            EV: I have given orders
+
+    Mixed narration+quote paragraphs deliberately abstain.
+    """
+
+    records = []
+    quarantined = list(
+        parsed.quarantined
+    )
+
+    quote_only_provenance_dropped = 0
+
+    for record in parsed.records:
+        if (
+            record.tag != 'EV'
+            or not record.spans
+        ):
+            records.append(record)
+            continue
+
+        sources = [
+            (
+                source_by_local_no.get(
+                    int(local_no),
+                    '',
+                )
+                or ''
+            )
+            for local_no in record.spans
+        ]
+
+        if (
+            sources
+            and all(sources)
+            and all(
+                _base_source_is_quote_only(
+                    source
+                )
+                for source in sources
+            )
+        ):
+            quote_only_provenance_dropped += 1
+
+            quarantined.append(
+                (
+                    record.raw
+                    or f"EV: {record.payload}",
+                    (
+                        "BASE contract EV provenance "
+                        "is entirely direct-speech SOURCE"
+                    ),
+                )
+            )
+            continue
+
+        records.append(record)
+
+    stats = dict(
+        parsed.stats
+    )
+
+    stats['parsed'] = len(records)
+
+    stats['content_count'] = len(
+        [
+            record
+            for record in records
+            if record.tag
+            not in {
+                'SUM',
+                'WHO',
+                'LOC',
+                'TIME',
+                'END',
+            }
+        ]
+    )
+
+    stats['quarantined'] = len(
+        quarantined
+    )
+
+    stats[
+        'base_contract_quote_only_ev_dropped'
+    ] = quote_only_provenance_dropped
+
+    return Parsed(
+        records=records,
+        ignored=list(parsed.ignored),
+        quarantined=quarantined,
+        stats=stats,
+        contract_pass=parsed.contract_pass,
+    )
+
+
 def analyze_next(book_id: int) -> dict:
     llama = LlamaClient()
 
@@ -9892,6 +10435,49 @@ def analyze_next(book_id: int) -> dict:
             "SELECT * FROM segments WHERE id=?",
             (seg['id'],),
         ).fetchone()
+
+        # ----------------------------------------------------
+        # BASE-G1 CANONICAL BOUNDARY
+        #
+        # Every extraction topology converges here:
+        #
+        # FAST / repair / ROBUST-A / ACTION / GAP / SAY / DOC
+        #                       |
+        #                       v
+        #              deterministic SOURCE proof
+        #                       |
+        #                       v
+        #                  apply_parsed()
+        #
+        # Persistence itself remains deliberately dumb.
+        # ----------------------------------------------------
+        base_g1_source_rows = list(
+            _say_segment_source_rows(
+                con,
+                seg['id'],
+            )
+        )
+
+        base_g1_source_by_local_no = {
+            int(row['local_no']):
+                (row['text'] or '')
+            for row in base_g1_source_rows
+        }
+
+        parsed = _sanitize_base_grounding(
+            parsed,
+            base_g1_source_by_local_no,
+        )
+
+        # BASE extraction-contract reliability.
+        #
+        # G1 remains frozen above. C1 handles semantic speech leakage
+        # that exact lexical quote grounding cannot detect when a weak
+        # model paraphrases quoted content into EV.
+        parsed = _sanitize_base_extraction_contract(
+            parsed,
+            base_g1_source_by_local_no,
+        )
 
         for raw, reason in parsed.quarantined:
             con.execute(
