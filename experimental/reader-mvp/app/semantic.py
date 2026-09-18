@@ -107,6 +107,77 @@ class Proposition:
             children=tuple(children),
         )
 
+    @classmethod
+    def modal(
+        cls,
+        modality: str,
+        child: "Proposition",
+    ):
+        if not modality.strip():
+            raise ValueError("modality must be non-empty")
+
+        return cls.atom(
+            "modal",
+            (("mode", modality),),
+            (child,),
+        )
+
+    @classmethod
+    def conditional(
+        cls,
+        antecedent: "Proposition",
+        consequent: "Proposition",
+        *,
+        counterfactual: bool = False,
+    ):
+        return cls.atom(
+            "conditional",
+            (
+                (
+                    "counterfactual",
+                    "true" if counterfactual else "false",
+                ),
+            ),
+            (
+                antecedent,
+                consequent,
+            ),
+        )
+
+    @classmethod
+    def cause(
+        cls,
+        cause: "Proposition",
+        effect: "Proposition",
+    ):
+        return cls.atom(
+            "cause",
+            (),
+            (
+                cause,
+                effect,
+            ),
+        )
+
+    @classmethod
+    def attitude(
+        cls,
+        subject_id: str,
+        attitude: str,
+        child: "Proposition",
+    ):
+        if not subject_id.strip():
+            raise ValueError("attitude subject required")
+
+        if not attitude.strip():
+            raise ValueError("attitude type required")
+
+        return cls.atom(
+            attitude,
+            (("subject", subject_id),),
+            (child,),
+        )
+
     def structural_data(self):
         return {
             "op": self.op,
@@ -192,6 +263,50 @@ class SemanticChange:
 
 
 @dataclass(frozen=True)
+class TemporalConstraint:
+    """
+    Story-time relation attached to an immutable proposition.
+
+    This is deliberately separate from Evidence.position, which is
+    discourse/reader visibility order.
+
+    Example:
+
+        proposition:
+            John hid the key
+
+        evidence.position:
+            chapter/discourse position where this is narrated
+
+        temporal relation:
+            proposition happened twenty years before a story anchor
+    """
+
+    proposition_key: str
+    relation: str
+    anchor: str
+    amount: float | None = None
+    unit: str | None = None
+    approximate: bool = False
+
+    def __post_init__(self):
+        if not self.proposition_key:
+            raise ValueError(
+                "TemporalConstraint requires proposition_key"
+            )
+
+        if not self.relation.strip():
+            raise ValueError(
+                "TemporalConstraint requires relation"
+            )
+
+        if not self.anchor.strip():
+            raise ValueError(
+                "TemporalConstraint requires anchor"
+            )
+
+
+@dataclass(frozen=True)
 class KnowledgeBoundary:
     position: int | None = None
     evidence_ids: frozenset[str] | None = None
@@ -219,6 +334,7 @@ class SemanticContext:
     propositions: tuple[Proposition, ...] = ()
     evidence: tuple[Evidence, ...] = ()
     changes: tuple[SemanticChange, ...] = ()
+    temporal_constraints: tuple[TemporalConstraint, ...] = ()
 
     @property
     def proposition_by_key(self):
@@ -648,4 +764,55 @@ def build_context_packet(
         ),
         evidence_ids=evidence_ids,
         source_ids=source_ids,
+    )
+
+def temporal_constraints_for(
+    context: SemanticContext,
+    proposition: Proposition | str,
+):
+    key = (
+        proposition
+        if isinstance(proposition, str)
+        else proposition.key
+    )
+
+    return tuple(
+        constraint
+        for constraint
+        in context.temporal_constraints
+        if constraint.proposition_key == key
+    )
+
+
+def truth_history(
+    context: SemanticContext,
+    proposition: Proposition | str,
+    boundary: KnowledgeBoundary,
+):
+    """
+    Visible ASSERT/RETRACT history for one immutable proposition.
+
+    This supports historical reconstruction without rewriting the
+    proposition itself.
+    """
+
+    key = (
+        proposition
+        if isinstance(proposition, str)
+        else proposition.key
+    )
+
+    return tuple(
+        change
+        for change in _visible_changes(
+            context,
+            boundary,
+        )
+        if (
+            change.target_key == key
+            and change.kind in {
+                ASSERT,
+                RETRACT,
+            }
+        )
     )

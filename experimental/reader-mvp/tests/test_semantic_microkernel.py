@@ -536,3 +536,320 @@ def test_visible_evidence_respects_boundary():
     ] == [
         "early",
     ]
+
+
+def test_f04_modal_scopes_under_attribution():
+    lied = Proposition.atom(
+        "lie",
+        (("actor", "mary"),),
+    )
+
+    might_lie = Proposition.modal(
+        "might",
+        lied,
+    )
+
+    john_said = Proposition.atom(
+        "say",
+        (("speaker", "john"),),
+        (might_lie,),
+    )
+
+    assert john_said.predication.predicate == "say"
+    assert john_said.children[0].predication.predicate == "modal"
+    assert (
+        john_said.children[0]
+        .predication.roles
+        == (("mode", "might"),)
+    )
+    assert (
+        john_said.children[0]
+        .children[0]
+        .predication.predicate
+        == "lie"
+    )
+
+
+def test_f05_counterfactual_conditional_under_attitude():
+    letter_arrived = Proposition.atom(
+        "arrive",
+        (("object", "letter"),),
+    )
+
+    he_did_it = Proposition.atom(
+        "do",
+        (
+            ("actor", "he"),
+            ("object", "it"),
+        ),
+    )
+
+    conditional = Proposition.conditional(
+        letter_arrived,
+        he_did_it,
+        counterfactual=True,
+    )
+
+    supposed = Proposition.attitude(
+        "she",
+        "suppose",
+        conditional,
+    )
+
+    assert (
+        supposed.predication.predicate
+        == "suppose"
+    )
+
+    inner = supposed.children[0]
+
+    assert (
+        inner.predication.predicate
+        == "conditional"
+    )
+
+    assert (
+        ("counterfactual", "true")
+        in inner.predication.roles
+    )
+
+    assert inner.children == (
+        letter_arrived,
+        he_did_it,
+    )
+
+
+def test_f12_story_time_is_separate_from_discourse_position():
+    from app.semantic import (
+        TemporalConstraint,
+        temporal_constraints_for,
+    )
+
+    hidden = Proposition.atom(
+        "hide",
+        (
+            ("actor", "john"),
+            ("object", "key"),
+        ),
+    )
+
+    evidence = Evidence(
+        id="e-narrated-now",
+        source_ids=("CH20.P04",),
+        position=20,
+        text="Twenty years earlier, John had hidden the key.",
+    )
+
+    temporal = TemporalConstraint(
+        proposition_key=hidden.key,
+        relation="before",
+        anchor="discourse_now",
+        amount=20,
+        unit="years",
+    )
+
+    context = SemanticContext(
+        propositions=(hidden,),
+        evidence=(evidence,),
+        changes=(
+            SemanticChange(
+                position=20,
+                kind=ASSERT,
+                target_key=hidden.key,
+                evidence_ids=("e-narrated-now",),
+            ),
+        ),
+        temporal_constraints=(temporal,),
+    )
+
+    assert (
+        truth_view(
+            context,
+            hidden,
+            KnowledgeBoundary(position=19),
+        ).status
+        == "UNKNOWN"
+    )
+
+    assert (
+        truth_view(
+            context,
+            hidden,
+            KnowledgeBoundary(position=20),
+        ).status
+        == "SUPPORTED"
+    )
+
+    constraints = temporal_constraints_for(
+        context,
+        hidden,
+    )
+
+    assert constraints == (temporal,)
+    assert constraints[0].amount == 20
+    assert constraints[0].unit == "years"
+
+
+def test_f14_explicit_cause_differs_from_sequence():
+    bridge_collapsed = Proposition.atom(
+        "collapse",
+        (("actor", "bridge"),),
+    )
+
+    army_retreated = Proposition.atom(
+        "retreat",
+        (("actor", "army"),),
+    )
+
+    causal = Proposition.cause(
+        bridge_collapsed,
+        army_retreated,
+    )
+
+    merely_both = (
+        bridge_collapsed,
+        army_retreated,
+    )
+
+    assert (
+        causal.predication.predicate
+        == "cause"
+    )
+
+    assert causal.children == merely_both
+
+    assert causal.key not in {
+        bridge_collapsed.key,
+        army_retreated.key,
+    }
+
+
+def test_f19_misdirection_retraction_and_true_identity():
+    from app.semantic import (
+        RETRACT,
+        truth_history,
+    )
+
+    masked_is_robert = Proposition.atom(
+        "identity_claim",
+        (
+            ("left", "masked_man"),
+            ("right", "robert"),
+        ),
+    )
+
+    context = SemanticContext(
+        referents=(
+            Referent("masked_man", "Masked Man"),
+            Referent("robert", "Robert"),
+            Referent("marcus", "Marcus"),
+        ),
+        propositions=(
+            masked_is_robert,
+        ),
+        evidence=(
+            Evidence(
+                id="e4",
+                source_ids=("CH4.P03",),
+                position=4,
+                text="All evidence pointed to Robert as the masked man.",
+            ),
+            Evidence(
+                id="e8",
+                source_ids=("CH8.P02",),
+                position=8,
+                text="The identification of Robert was false.",
+            ),
+            Evidence(
+                id="e9",
+                source_ids=("CH9.P01",),
+                position=9,
+                text="The masked man was Marcus.",
+            ),
+        ),
+        changes=(
+            SemanticChange(
+                position=4,
+                kind=ASSERT,
+                target_key=masked_is_robert.key,
+                evidence_ids=("e4",),
+            ),
+            SemanticChange(
+                position=8,
+                kind=RETRACT,
+                target_key=masked_is_robert.key,
+                evidence_ids=("e8",),
+            ),
+            SemanticChange(
+                position=9,
+                kind=IDENTITY_ADD,
+                left_id="masked_man",
+                right_id="marcus",
+                evidence_ids=("e9",),
+            ),
+        ),
+    )
+
+    at_5 = KnowledgeBoundary(position=5)
+    at_8 = KnowledgeBoundary(position=8)
+    at_9 = KnowledgeBoundary(position=9)
+
+    assert (
+        truth_view(
+            context,
+            masked_is_robert,
+            at_5,
+        ).status
+        == "SUPPORTED"
+    )
+
+    assert (
+        truth_view(
+            context,
+            masked_is_robert,
+            at_8,
+        ).status
+        == "RETRACTED"
+    )
+
+    early_identity = identity_projection(
+        context,
+        at_5,
+    )
+
+    late_identity = identity_projection(
+        context,
+        at_9,
+    )
+
+    assert (
+        early_identity["masked_man"]
+        != early_identity["marcus"]
+    )
+
+    assert (
+        late_identity["masked_man"]
+        == late_identity["marcus"]
+    )
+
+    history = truth_history(
+        context,
+        masked_is_robert,
+        at_9,
+    )
+
+    assert [
+        change.kind
+        for change in history
+    ] == [
+        ASSERT,
+        RETRACT,
+    ]
+
+    assert [
+        change.evidence_ids
+        for change in history
+    ] == [
+        ("e4",),
+        ("e8",),
+    ]
